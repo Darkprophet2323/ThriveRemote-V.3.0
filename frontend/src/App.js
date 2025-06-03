@@ -413,7 +413,7 @@ const App = () => {
       formData.append('file', file);
 
       try {
-        const response = await fetch(`${BACKEND_URL}/api/tasks/upload`, {
+        const response = await fetch(`${BACKEND_URL}/api/tasks/upload?user_id=${USER_ID}`, {
           method: 'POST',
           body: formData
         });
@@ -423,9 +423,12 @@ const App = () => {
           id: 'task_upload',
           type: 'success',
           title: '📋 Tasks Uploaded!',
-          message: result.message,
+          message: `${result.message} (+${result.points_earned} points)`,
           timestamp: new Date().toISOString()
         }]);
+        
+        // Refresh tasks
+        setTimeout(() => window.location.reload(), 2000);
       } catch (error) {
         console.error('Error uploading tasks:', error);
       }
