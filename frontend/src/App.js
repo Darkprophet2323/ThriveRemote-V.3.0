@@ -382,71 +382,125 @@ const App = () => {
     }
   };
 
-  const SavingsTracker = () => (
-    <div className="terminal-content">
-      <div className="terminal-header">
-        <span className="text-cyan-400">thriveremote@system:~$</span> savings --progress --goal=5000 --streak
-      </div>
-      {savings && (
-        <div className="mt-4">
-          <div className="savings-progress-container achievement-glow">
-            <div className="flex justify-between text-white mb-2">
-              <span>Progress to $5,000 Goal</span>
-              <span>${savings.current_amount.toFixed(2)}</span>
+  const SavingsTracker = () => {
+    const [newAmount, setNewAmount] = useState('');
+    
+    const updateSavings = async () => {
+      if (!newAmount || isNaN(newAmount)) return;
+      
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/savings/update?user_id=${USER_ID}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount: parseFloat(newAmount), user_id: USER_ID })
+        });
+        const result = await response.json();
+        
+        setNotifications(prev => [...prev, {
+          id: 'savings_update',
+          type: 'success',
+          title: '💰 Savings Updated!',
+          message: `${result.message} (+${result.points_earned} points)`,
+          timestamp: new Date().toISOString()
+        }]);
+        
+        setNewAmount('');
+        
+        // Refresh to show updated data
+        setTimeout(() => window.location.reload(), 2000);
+      } catch (error) {
+        console.error('Error updating savings:', error);
+      }
+    };
+
+    return (
+      <div className="terminal-content">
+        <div className="terminal-header">
+          <span className="text-cyan-400">thriveremote@system:~$</span> savings --progress --goal=5000 --live-tracking
+        </div>
+        
+        <div className="mb-4">
+          <div className="flex gap-2 mb-2">
+            <input
+              type="number"
+              value={newAmount}
+              onChange={(e) => setNewAmount(e.target.value)}
+              placeholder="Enter new savings amount"
+              className="terminal-input flex-1 px-3 py-2 bg-gray-800 text-white rounded border border-gray-600"
+            />
+            <button onClick={updateSavings} className="apply-btn">
+              💰 Update Savings
+            </button>
+          </div>
+          <span className="text-gray-400 text-sm">Track your real savings progress & earn streak bonuses</span>
+        </div>
+
+        {savings && (
+          <div className="mt-4">
+            <div className="savings-progress-container achievement-glow">
+              <div className="flex justify-between text-white mb-2">
+                <span>Progress to $5,000 Goal</span>
+                <span>${savings.current_amount.toFixed(2)}</span>
+              </div>
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill" 
+                  style={{ width: `${savings.progress_percentage}%` }}
+                ></div>
+              </div>
+              <div className="text-center mt-2 text-green-400 font-bold">
+                {savings.progress_percentage.toFixed(1)}% Complete
+              </div>
+              {savings.streak_bonus > 0 && (
+                <div className="text-center mt-1 text-orange-400 text-sm">
+                  🔥 Streak Bonus: +${savings.streak_bonus} ({savings.daily_streak} days)
+                </div>
+              )}
+              {savings.base_amount !== undefined && (
+                <div className="text-center mt-1 text-blue-400 text-xs">
+                  Base: ${savings.base_amount} + Bonus: ${savings.streak_bonus}
+                </div>
+              )}
             </div>
-            <div className="progress-bar">
-              <div 
-                className="progress-fill" 
-                style={{ width: `${savings.progress_percentage}%` }}
-              ></div>
+            
+            <div className="grid grid-cols-3 gap-4 mt-6">
+              <div className="stat-card">
+                <div className="stat-value">${savings.monthly_target}</div>
+                <div className="stat-label">Monthly Target</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">{savings.months_to_goal}</div>
+                <div className="stat-label">Months to Goal</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">${(5000 - savings.current_amount).toFixed(0)}</div>
+                <div className="stat-label">Remaining</div>
+              </div>
             </div>
-            <div className="text-center mt-2 text-green-400 font-bold">
-              {savings.progress_percentage.toFixed(1)}% Complete
-            </div>
-            {savings.streak_bonus > 0 && (
-              <div className="text-center mt-1 text-orange-400 text-sm">
-                🔥 Streak Bonus: +${savings.streak_bonus}
+
+            {savings.monthly_progress && (
+              <div className="mt-6">
+                <h4 className="text-white font-bold mb-3">Monthly Progress 📈</h4>
+                <div className="space-y-2">
+                  {savings.monthly_progress.map((month, index) => (
+                    <div key={index} className="flex justify-between items-center bg-gray-800 p-2 rounded">
+                      <span className="text-gray-300">{month.month}</span>
+                      <div className="text-right">
+                        <span className="text-green-400 font-bold">${month.amount}</span>
+                        {month.streak_days && (
+                          <div className="text-orange-400 text-xs">🔥 {month.streak_days} days</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
-          
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="stat-card">
-              <div className="stat-value">${savings.monthly_target}</div>
-              <div className="stat-label">Monthly Target</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{savings.months_to_goal}</div>
-              <div className="stat-label">Months to Goal</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">${(5000 - savings.current_amount).toFixed(0)}</div>
-              <div className="stat-label">Remaining</div>
-            </div>
-          </div>
-
-          {savings.monthly_progress && (
-            <div className="mt-6">
-              <h4 className="text-white font-bold mb-3">Monthly Progress 📈</h4>
-              <div className="space-y-2">
-                {savings.monthly_progress.map((month, index) => (
-                  <div key={index} className="flex justify-between items-center bg-gray-800 p-2 rounded">
-                    <span className="text-gray-300">{month.month}</span>
-                    <div className="text-right">
-                      <span className="text-green-400 font-bold">${month.amount}</span>
-                      {month.streak_days && (
-                        <div className="text-orange-400 text-xs">🔥 {month.streak_days} days</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
+  };
 
   const TaskManager = () => {
     const handleFileUpload = async (event) => {
