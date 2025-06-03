@@ -228,10 +228,10 @@ class ThriveRemoteAPITester(unittest.TestCase):
         
         return data["achievements"]
         
-    def test_13_achievement_unlock_endpoint(self):
+    def test_16_achievement_unlock_endpoint(self):
         """Test the achievement unlock endpoint"""
         # First get achievements
-        achievements = self.test_12_achievements_endpoint()
+        achievements = self.test_15_achievements_endpoint()
         
         # Find a locked achievement
         locked_achievements = [a for a in achievements if not a["unlocked"]]
@@ -244,8 +244,7 @@ class ThriveRemoteAPITester(unittest.TestCase):
         
         # Unlock the achievement
         response = requests.post(
-            f"{self.base_url}/api/achievements/{achievement_id}/unlock",
-            params={"user_id": self.user_id}
+            f"{self.base_url}/api/achievements/{achievement_id}/unlock?session_token={self.session_token}"
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
