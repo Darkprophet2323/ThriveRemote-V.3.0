@@ -131,9 +131,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
         # We don't require applications to exist, just check the endpoint works
         print(f"✅ Applications endpoint test passed - Found {len(data['applications'])} applications")
 
-    def test_06_savings_endpoint(self):
+    def test_09_savings_endpoint(self):
         """Test the savings endpoint"""
-        response = requests.get(f"{self.base_url}/api/savings", params={"user_id": self.user_id})
+        response = requests.get(f"{self.base_url}/api/savings?session_token={self.session_token}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertIn("current_amount", data)
