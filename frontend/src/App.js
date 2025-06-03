@@ -347,7 +347,10 @@ const App = () => {
         if (tasksRes.ok) setTasks((await tasksRes.json()).tasks);
         if (statsRes.ok) setDashboardStats(await statsRes.json());
         if (achievementsRes.ok) setAchievements((await achievementsRes.json()).achievements);
-        if (notificationsRes.ok) setNotifications(prev => [...prev, ...(await notificationsRes.json()).notifications]);
+        if (notificationsRes.ok) {
+          const notificationData = await notificationsRes.json();
+          setNotifications(prev => [...prev, ...notificationData.notifications]);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
       }
