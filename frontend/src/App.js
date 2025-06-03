@@ -512,7 +512,7 @@ const App = () => {
           const response = await fetch(`${BACKEND_URL}/api/terminal/command`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ command })
+            body: JSON.stringify({ command, user_id: USER_ID })
           });
           
           if (response.ok) {
