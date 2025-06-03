@@ -1392,7 +1392,7 @@ const App = () => {
       {activeWindows.map(window => (
         <div
           key={window.id}
-          className={`window ${window.minimized ? 'minimized' : ''}`}
+          className={`window ${window.minimized ? 'minimized' : ''} ${window.opening ? 'opening' : ''} ${window.closing ? 'closing' : ''}`}
           style={{
             left: window.position.x,
             top: window.position.y,
