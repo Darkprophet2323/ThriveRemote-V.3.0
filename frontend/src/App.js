@@ -26,6 +26,7 @@ const App = () => {
   const [dragging, setDragging] = useState(null);
   const [relocateData, setRelocateData] = useState(null);
   const [backgroundIndex, setBackgroundIndex] = useState(0);
+  const [transparency, setTransparency] = useState(85); // 85% opacity by default
 
   // Professional Garuda Linux background images
   const backgroundImages = [
