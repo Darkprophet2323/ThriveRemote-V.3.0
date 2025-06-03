@@ -1351,6 +1351,13 @@ const App = () => {
           </div>
           <div className="ml-auto flex items-center space-x-4">
             <button 
+              onClick={switchBackground}
+              className="text-cyan-400 hover:text-cyan-300 text-xs font-bold bg-gray-800 bg-opacity-60 px-2 py-1 rounded border border-cyan-500 border-opacity-30"
+              title="Switch Background Theme"
+            >
+              🖼️ Theme
+            </button>
+            <button 
               onClick={handleLogout}
               className="text-red-400 hover:text-red-300 text-xs font-bold"
             >
