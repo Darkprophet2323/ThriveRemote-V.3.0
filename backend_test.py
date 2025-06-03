@@ -253,16 +253,15 @@ class ThriveRemoteAPITester(unittest.TestCase):
         self.assertTrue(data["achievement"]["unlocked"])
         print(f"✅ Achievement unlock endpoint test passed")
 
-    def test_14_terminal_command_endpoint(self):
+    def test_17_terminal_command_endpoint(self):
         """Test the terminal command endpoint"""
         # Test various commands
-        commands = ["help", "jobs", "savings", "tasks", "stats", "konami", "matrix", "surprise"]
+        commands = ["help", "jobs", "savings", "tasks", "stats", "relocate", "properties", "costs"]
         
         for command in commands:
             response = requests.post(
-                f"{self.base_url}/api/terminal/command", 
-                json={"command": command},
-                params={"user_id": self.user_id}
+                f"{self.base_url}/api/terminal/command?session_token={self.session_token}", 
+                json={"command": command}
             )
             self.assertEqual(response.status_code, 200)
             data = response.json()
