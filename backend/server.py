@@ -662,6 +662,10 @@ def get_current_user(session_token: str = None):
     
     return user_id
 
+def get_session_token_from_request(session_token: str = None):
+    """Extract session token from request"""
+    return session_token
+
 # API Routes
 
 @app.get("/")
