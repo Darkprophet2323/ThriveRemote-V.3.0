@@ -10,16 +10,6 @@ class ThriveRemoteAPITester(unittest.TestCase):
         self.tests_run = 0
         self.tests_passed = 0
 
-    def setUp(self):
-        self.tests_run += 1
-
-    def tearDown(self):
-        if hasattr(self, '_outcome'):
-            result = self.defaultTestResult()
-            self._feedErrorsToResult(result, self._outcome.errors)
-            if result.wasSuccessful():
-                self.tests_passed += 1
-
     def test_root_endpoint(self):
         """Test the root endpoint"""
         response = requests.get(f"{self.base_url}")
@@ -88,14 +78,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
         self.assertIn("application", data)
         print(f"✅ Job apply endpoint test passed")
 
-    def print_summary(self):
-        print(f"\n📊 API Tests Summary: {self.tests_passed}/{self.tests_run} tests passed")
-        return self.tests_passed == self.tests_run
-
 if __name__ == "__main__":
-    tester = ThriveRemoteAPITester()
     suite = unittest.TestLoader().loadTestsFromTestCase(ThriveRemoteAPITester)
     result = unittest.TextTestRunner().run(suite)
     
-    success = tester.print_summary()
-    sys.exit(0 if success else 1)
+    print(f"\n📊 API Tests Summary: {result.testsRun - len(result.errors) - len(result.failures)}/{result.testsRun} tests passed")
+    sys.exit(0 if result.wasSuccessful() else 1)
