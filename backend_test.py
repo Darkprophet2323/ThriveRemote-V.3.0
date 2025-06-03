@@ -170,7 +170,7 @@ class ThriveRemoteAPITester(unittest.TestCase):
         
         return data["tasks"]
 
-    def test_09_create_task_endpoint(self):
+    def test_12_create_task_endpoint(self):
         """Test creating a task"""
         task_data = {
             "title": "Test Task",
@@ -180,9 +180,8 @@ class ThriveRemoteAPITester(unittest.TestCase):
         }
         
         response = requests.post(
-            f"{self.base_url}/api/tasks", 
-            json=task_data,
-            params={"user_id": self.user_id}
+            f"{self.base_url}/api/tasks?session_token={self.session_token}", 
+            json=task_data
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
