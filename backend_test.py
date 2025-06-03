@@ -218,9 +218,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
         self.assertIn("savings_progress", data)
         print(f"✅ Dashboard stats endpoint test passed")
 
-    def test_12_achievements_endpoint(self):
+    def test_15_achievements_endpoint(self):
         """Test the achievements endpoint"""
-        response = requests.get(f"{self.base_url}/api/achievements", params={"user_id": self.user_id})
+        response = requests.get(f"{self.base_url}/api/achievements?session_token={self.session_token}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertIn("achievements", data)
