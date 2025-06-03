@@ -121,9 +121,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
         self.assertIn("application", data)
         print(f"✅ Job apply endpoint test passed")
 
-    def test_05_applications_endpoint(self):
+    def test_08_applications_endpoint(self):
         """Test the applications endpoint"""
-        response = requests.get(f"{self.base_url}/api/applications", params={"user_id": self.user_id})
+        response = requests.get(f"{self.base_url}/api/applications?session_token={self.session_token}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertIn("applications", data)
