@@ -1,38 +1,342 @@
-.App {
-    text-align: center;
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* OS Desktop Styles - Garuda Linux Inspired */
+.os-desktop {
+  @apply h-screen w-screen overflow-hidden bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 relative;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
 }
 
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+.desktop-bg {
+  @apply absolute inset-0 opacity-20;
+  background-image: 
+    radial-gradient(circle at 25% 25%, #3b82f6 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, #8b5cf6 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, #06b6d4 0%, transparent 50%);
+  animation: pulse 8s ease-in-out infinite alternate;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+@keyframes pulse {
+  0% { opacity: 0.1; }
+  100% { opacity: 0.3; }
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+/* Top Panel */
+.top-panel {
+  @apply fixed top-0 left-0 right-0 h-8 bg-black bg-opacity-80 backdrop-blur-sm border-b border-cyan-500 border-opacity-30 px-4 flex items-center text-xs z-50;
 }
 
-.App-link {
-    color: #61dafb;
+.os-logo {
+  @apply text-cyan-400 font-bold text-sm;
+  text-shadow: 0 0 10px #22d3ee;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.system-stats {
+  @apply text-green-400 font-mono text-xs;
+}
+
+.system-time {
+  @apply text-blue-400 font-mono text-xs;
+}
+
+/* Desktop Applications */
+.desktop-apps {
+  @apply absolute top-12 left-4 grid grid-cols-2 gap-4 z-10;
+}
+
+.desktop-app {
+  @apply w-20 h-20 flex flex-col items-center justify-center cursor-pointer rounded-lg border border-gray-700 bg-black bg-opacity-40 backdrop-blur-sm hover:bg-opacity-60 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-500/20 transition-all duration-300;
+}
+
+.desktop-app:hover {
+  transform: translateY(-2px);
+}
+
+.app-icon {
+  @apply text-2xl mb-1;
+}
+
+.app-name {
+  @apply text-xs text-gray-300 text-center font-medium;
+}
+
+/* Window Styles */
+.window {
+  @apply absolute bg-gray-900 bg-opacity-95 backdrop-blur-md rounded-lg shadow-2xl border border-gray-700 min-w-96 min-h-64 z-20;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(34, 211, 238, 0.1);
+}
+
+.window.minimized {
+  @apply transform scale-0 opacity-0;
+  transition: all 0.3s ease-in-out;
+}
+
+.window-header {
+  @apply flex items-center justify-between bg-gray-800 bg-opacity-90 p-3 rounded-t-lg border-b border-gray-700;
+}
+
+.window-title {
+  @apply text-white font-semibold text-sm;
+}
+
+.window-controls {
+  @apply flex space-x-2;
+}
+
+.window-control {
+  @apply w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white hover:bg-opacity-80 transition-colors;
+}
+
+.window-control.minimize {
+  @apply bg-yellow-500 hover:bg-yellow-400;
+}
+
+.window-control.close {
+  @apply bg-red-500 hover:bg-red-400;
+}
+
+.window-content {
+  @apply p-4 max-h-96 overflow-auto;
+}
+
+/* Terminal Styles */
+.terminal-content {
+  @apply bg-black bg-opacity-80 rounded-lg p-4 font-mono text-sm;
+  min-height: 300px;
+}
+
+.terminal-header {
+  @apply text-gray-300 mb-4 pb-2 border-b border-gray-700;
+}
+
+.terminal-line {
+  @apply text-gray-300 leading-relaxed;
+}
+
+.terminal-output {
+  @apply space-y-1;
+}
+
+.terminal-input-line {
+  @apply flex items-center bg-gray-800 bg-opacity-50 p-2 rounded border border-gray-700;
+}
+
+.terminal-input {
+  @apply bg-transparent text-white outline-none font-mono text-sm;
+}
+
+/* Stats and Cards */
+.stat-card {
+  @apply bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-lg p-4 text-center border border-gray-700 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-500/10 transition-all duration-300;
+}
+
+.stat-value {
+  @apply text-2xl font-bold text-cyan-400 mb-1;
+  text-shadow: 0 0 10px #22d3ee;
+}
+
+.stat-label {
+  @apply text-xs text-gray-400 uppercase tracking-wide;
+}
+
+/* Job Cards */
+.job-card {
+  @apply bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-lg p-4 border border-gray-700 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300;
+}
+
+.skill-tag {
+  @apply bg-blue-600 bg-opacity-50 text-blue-200 px-2 py-1 rounded text-xs font-medium border border-blue-500 border-opacity-30;
+}
+
+.status-badge {
+  @apply px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide;
+}
+
+.status-badge.not-applied {
+  @apply bg-gray-600 text-gray-200;
+}
+
+.status-badge.applied {
+  @apply bg-blue-600 text-blue-200;
+}
+
+.status-badge.interviewing {
+  @apply bg-green-600 text-green-200;
+}
+
+.status-badge.todo {
+  @apply bg-yellow-600 text-yellow-200;
+}
+
+.status-badge.in-progress {
+  @apply bg-blue-600 text-blue-200;
+}
+
+.status-badge.completed {
+  @apply bg-green-600 text-green-200;
+}
+
+.apply-btn {
+  @apply bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:shadow-lg hover:shadow-cyan-500/30 transition-all duration-300;
+}
+
+.apply-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Savings Progress */
+.savings-progress-container {
+  @apply bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-lg p-6 border border-gray-700;
+}
+
+.progress-bar {
+  @apply w-full h-4 bg-gray-700 rounded-full overflow-hidden;
+}
+
+.progress-fill {
+  @apply h-full bg-gradient-to-r from-green-500 to-cyan-500 rounded-full transition-all duration-1000 ease-out;
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+}
+
+/* Task Cards */
+.task-card {
+  @apply bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-lg p-4 border border-gray-700 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300;
+}
+
+.priority-badge {
+  @apply px-2 py-1 rounded text-xs font-bold uppercase;
+}
+
+.priority-badge.high {
+  @apply bg-red-600 bg-opacity-50 text-red-200 border border-red-500 border-opacity-30;
+}
+
+.priority-badge.medium {
+  @apply bg-yellow-600 bg-opacity-50 text-yellow-200 border border-yellow-500 border-opacity-30;
+}
+
+.priority-badge.low {
+  @apply bg-green-600 bg-opacity-50 text-green-200 border border-green-500 border-opacity-30;
+}
+
+.category-badge {
+  @apply bg-purple-600 bg-opacity-50 text-purple-200 px-2 py-1 rounded text-xs font-medium border border-purple-500 border-opacity-30;
+}
+
+/* Skill Progress */
+.skill-progress {
+  @apply bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-lg p-4 border border-gray-700;
+}
+
+/* Taskbar */
+.taskbar {
+  @apply fixed bottom-0 left-0 right-0 h-12 bg-black bg-opacity-90 backdrop-blur-sm border-t border-cyan-500 border-opacity-30 flex items-center px-4 z-50;
+}
+
+.taskbar-left, .taskbar-center, .taskbar-right {
+  @apply flex items-center;
+}
+
+.taskbar-center {
+  @apply flex-1 justify-center space-x-2;
+}
+
+.start-menu {
+  @apply text-cyan-400 font-bold cursor-pointer hover:text-cyan-300 transition-colors;
+}
+
+.taskbar-item {
+  @apply bg-gray-800 bg-opacity-60 px-3 py-1 rounded text-white text-sm cursor-pointer hover:bg-opacity-80 transition-all duration-300 border border-gray-700 hover:border-cyan-500;
+}
+
+.taskbar-item.minimized {
+  @apply opacity-60;
+}
+
+.system-tray {
+  @apply text-gray-300 text-xs flex items-center space-x-2;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-800 rounded;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-cyan-600 rounded hover:bg-cyan-500;
+}
+
+/* Animations and Effects */
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(34, 211, 238, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.8); }
+}
+
+.window:hover {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .window {
+    @apply w-full h-full top-8 left-0 rounded-none;
+  }
+  
+  .desktop-apps {
+    @apply grid-cols-4 gap-2;
+  }
+  
+  .desktop-app {
+    @apply w-16 h-16;
+  }
+  
+  .app-icon {
+    @apply text-xl;
+  }
+  
+  .app-name {
+    @apply text-xs;
+  }
+}
+
+/* Additional Professional Styling */
+.text-shadow {
+  text-shadow: 0 0 10px currentColor;
+}
+
+.border-glow {
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+}
+
+.bg-glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Loading animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 30px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* Focus states for accessibility */
+button:focus,
+input:focus {
+  @apply outline-none ring-2 ring-cyan-500 ring-opacity-50;
 }
