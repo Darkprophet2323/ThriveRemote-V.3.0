@@ -2,7 +2,7 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
-/* OS Desktop Styles - Garuda Linux Inspired */
+/* OS Desktop Styles - Enhanced Garuda Linux Inspired */
 .os-desktop {
   @apply h-screen w-screen overflow-hidden bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 relative;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
@@ -22,9 +22,98 @@
   100% { opacity: 0.3; }
 }
 
-/* Top Panel */
+/* Enhanced Animations */
+@keyframes rainbow {
+  0%, 100% { background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3); }
+  50% { background: linear-gradient(45deg, #9400d3, #4b0082, #0000ff, #00ff00, #ffff00, #ff7f00, #ff0000); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(34, 211, 238, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.8); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(34, 211, 238, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(34, 211, 238, 0.7), 0 0 35px rgba(34, 211, 238, 0.4); }
+}
+
+@keyframes achievement-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(168, 85, 247, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(168, 85, 247, 0.7), 0 0 35px rgba(168, 85, 247, 0.4); }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 30px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Animation Classes */
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+.pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.achievement-glow {
+  animation: achievement-glow 4s ease-in-out infinite;
+}
+
+/* Notification System */
+.notification-container {
+  @apply fixed top-16 right-4 z-50 space-y-2;
+}
+
+.notification {
+  @apply bg-gray-800 bg-opacity-95 backdrop-blur-md rounded-lg p-4 border-l-4 cursor-pointer transition-all duration-300 transform hover:scale-105 min-w-80 max-w-96;
+}
+
+.notification.success {
+  @apply border-green-500 shadow-lg shadow-green-500/20;
+}
+
+.notification.achievement {
+  @apply border-yellow-500 shadow-lg shadow-yellow-500/20;
+}
+
+.notification.info {
+  @apply border-blue-500 shadow-lg shadow-blue-500/20;
+}
+
+.notification-title {
+  @apply text-white font-bold text-sm mb-1;
+}
+
+.notification-message {
+  @apply text-gray-300 text-xs;
+}
+
+/* Top Panel Enhanced */
 .top-panel {
-  @apply fixed top-0 left-0 right-0 h-8 bg-black bg-opacity-80 backdrop-blur-sm border-b border-cyan-500 border-opacity-30 px-4 flex items-center text-xs z-50;
+  @apply fixed top-0 left-0 right-0 h-8 bg-black bg-opacity-90 backdrop-blur-sm border-b border-cyan-500 border-opacity-30 px-4 flex items-center text-xs z-50;
 }
 
 .os-logo {
@@ -40,7 +129,7 @@
   @apply text-blue-400 font-mono text-xs;
 }
 
-/* Desktop Applications */
+/* Enhanced Desktop Applications */
 .desktop-apps {
   @apply absolute top-12 left-4 grid grid-cols-2 gap-4 z-10;
 }
@@ -50,7 +139,7 @@
 }
 
 .desktop-app:hover {
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.05);
 }
 
 .app-icon {
@@ -61,19 +150,23 @@
   @apply text-xs text-gray-300 text-center font-medium;
 }
 
-/* Window Styles */
+/* Enhanced Window Styles */
 .window {
-  @apply absolute bg-gray-900 bg-opacity-95 backdrop-blur-md rounded-lg shadow-2xl border border-gray-700 min-w-96 min-h-64 z-20;
+  @apply absolute bg-gray-900 bg-opacity-95 backdrop-blur-md rounded-lg shadow-2xl border border-gray-700 min-w-96 min-h-64 z-20 select-none;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(34, 211, 238, 0.1);
+  transition: all 0.3s ease-in-out;
 }
 
 .window.minimized {
   @apply transform scale-0 opacity-0;
-  transition: all 0.3s ease-in-out;
+}
+
+.window:hover {
+  animation: glow 2s ease-in-out infinite;
 }
 
 .window-header {
-  @apply flex items-center justify-between bg-gray-800 bg-opacity-90 p-3 rounded-t-lg border-b border-gray-700;
+  @apply flex items-center justify-between bg-gray-800 bg-opacity-90 p-3 rounded-t-lg border-b border-gray-700 cursor-move;
 }
 
 .window-title {
@@ -100,7 +193,7 @@
   @apply p-4 max-h-96 overflow-auto;
 }
 
-/* Terminal Styles */
+/* Enhanced Terminal Styles */
 .terminal-content {
   @apply bg-black bg-opacity-80 rounded-lg p-4 font-mono text-sm;
   min-height: 300px;
@@ -126,7 +219,7 @@
   @apply bg-transparent text-white outline-none font-mono text-sm;
 }
 
-/* Stats and Cards */
+/* Enhanced Stats and Cards */
 .stat-card {
   @apply bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-lg p-4 text-center border border-gray-700 hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-500/10 transition-all duration-300;
 }
@@ -140,7 +233,7 @@
   @apply text-xs text-gray-400 uppercase tracking-wide;
 }
 
-/* Job Cards */
+/* Enhanced Job Cards */
 .job-card {
   @apply bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-lg p-4 border border-gray-700 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300;
 }
@@ -182,10 +275,10 @@
 }
 
 .apply-btn:hover {
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1.02);
 }
 
-/* Savings Progress */
+/* Enhanced Savings Progress */
 .savings-progress-container {
   @apply bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-lg p-6 border border-gray-700;
 }
@@ -199,7 +292,7 @@
   box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
 }
 
-/* Task Cards */
+/* Enhanced Task Cards */
 .task-card {
   @apply bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-lg p-4 border border-gray-700 hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300;
 }
@@ -224,12 +317,61 @@
   @apply bg-purple-600 bg-opacity-50 text-purple-200 px-2 py-1 rounded text-xs font-medium border border-purple-500 border-opacity-30;
 }
 
-/* Skill Progress */
+/* Enhanced Skill Progress */
 .skill-progress {
   @apply bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-lg p-4 border border-gray-700;
 }
 
-/* Taskbar */
+/* Pong Game Styles */
+.pong-game {
+  @apply relative bg-black border border-cyan-500 rounded-lg mx-auto overflow-hidden;
+  width: 300px;
+  height: 200px;
+}
+
+.pong-ball {
+  @apply absolute bg-cyan-400 rounded-full;
+  width: 10px;
+  height: 10px;
+  box-shadow: 0 0 10px #22d3ee;
+  animation: pulse-glow 1s ease-in-out infinite;
+}
+
+.pong-paddle {
+  @apply absolute bg-white rounded;
+  width: 60px;
+  height: 8px;
+  bottom: 10px;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+/* Achievement Styles */
+.achievement-card {
+  @apply bg-gray-800 bg-opacity-60 backdrop-blur-sm rounded-lg p-4 border border-gray-700 transition-all duration-300;
+}
+
+.achievement-card.unlocked {
+  @apply border-yellow-500 bg-yellow-900 bg-opacity-20;
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.3);
+}
+
+.achievement-card.locked {
+  @apply border-gray-600 opacity-60;
+}
+
+.achievement-status {
+  @apply w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold;
+}
+
+.achievement-status.unlocked {
+  @apply bg-green-600 text-white;
+}
+
+.achievement-status.locked {
+  @apply bg-gray-600 text-gray-400;
+}
+
+/* Enhanced Taskbar */
 .taskbar {
   @apply fixed bottom-0 left-0 right-0 h-12 bg-black bg-opacity-90 backdrop-blur-sm border-t border-cyan-500 border-opacity-30 flex items-center px-4 z-50;
 }
@@ -258,7 +400,7 @@
   @apply text-gray-300 text-xs flex items-center space-x-2;
 }
 
-/* Scrollbar Styling */
+/* Enhanced Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -271,14 +413,25 @@
   @apply bg-cyan-600 rounded hover:bg-cyan-500;
 }
 
-/* Animations and Effects */
-@keyframes glow {
-  0%, 100% { box-shadow: 0 0 5px rgba(34, 211, 238, 0.5); }
-  50% { box-shadow: 0 0 20px rgba(34, 211, 238, 0.8); }
+/* Focus states for accessibility */
+button:focus,
+input:focus {
+  @apply outline-none ring-2 ring-cyan-500 ring-opacity-50;
 }
 
-.window:hover {
-  animation: glow 2s ease-in-out infinite;
+/* Additional Professional Styling */
+.text-shadow {
+  text-shadow: 0 0 10px currentColor;
+}
+
+.border-glow {
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+}
+
+.bg-glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Responsive Design */
@@ -302,41 +455,54 @@
   .app-name {
     @apply text-xs;
   }
-}
-
-/* Additional Professional Styling */
-.text-shadow {
-  text-shadow: 0 0 10px currentColor;
-}
-
-.border-glow {
-  box-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
-}
-
-.bg-glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Loading animations */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 30px, 0);
+  
+  .notification-container {
+    @apply right-2 left-2;
   }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
+  
+  .notification {
+    @apply min-w-full;
   }
 }
 
-.fade-in-up {
-  animation: fadeInUp 0.6s ease-out;
+/* Dark mode enhancements */
+body {
+  @apply bg-gray-900 text-white;
 }
 
-/* Focus states for accessibility */
-button:focus,
-input:focus {
-  @apply outline-none ring-2 ring-cyan-500 ring-opacity-50;
+/* Additional hover effects */
+.hover-lift:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s ease-in-out;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.4);
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+/* Productivity indicators */
+.productivity-high {
+  @apply border-green-500 bg-green-900 bg-opacity-20;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+}
+
+.streak-indicator {
+  @apply text-orange-400;
+  text-shadow: 0 0 8px #fb923c;
+}
+
+/* Loading states */
+.loading-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Success feedback */
+.success-flash {
+  animation: flash 0.5s ease-in-out;
+}
+
+@keyframes flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; background-color: rgba(34, 197, 94, 0.2); }
 }
