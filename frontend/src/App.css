@@ -645,30 +645,88 @@ body {
   box-shadow: 0 0 20px rgba(34, 211, 238, 0.2);
 }
 
-/* Improved Window Management */
+/* Improved Window Management - Fixed Flashing Issues */
 .window {
-  @apply absolute bg-gray-900 bg-opacity-95 backdrop-blur-md rounded-lg shadow-2xl border border-gray-700 z-20 resize;
+  @apply absolute bg-gray-900 bg-opacity-95 backdrop-blur-md rounded-lg shadow-2xl border border-gray-700 z-20;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(34, 211, 238, 0.1);
-  transition: all 0.2s ease-in-out;
+  transition: transform 0.2s ease-out, opacity 0.2s ease-out, box-shadow 0.3s ease-out;
   min-width: 400px;
   min-height: 300px;
+  max-width: 90vw;
+  max-height: 90vh;
+  transform-origin: center center;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
 .window.minimized {
-  @apply transform scale-0 opacity-0;
-  transition: all 0.3s ease-in-out;
+  transform: scale(0.1) translateY(100vh);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.window:not(.minimized) {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .window:hover {
-  animation: glow 2s ease-in-out infinite;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.9), 
+    0 0 40px rgba(34, 211, 238, 0.2),
+    0 0 60px rgba(34, 211, 238, 0.1);
+  transform: translateY(-2px);
 }
 
 .window-header {
-  @apply flex items-center justify-between bg-gray-800 bg-opacity-90 p-3 rounded-t-lg border-b border-gray-700 cursor-move select-none;
+  @apply flex items-center justify-between bg-gray-800 bg-opacity-90 p-3 rounded-t-lg border-b border-gray-700 select-none;
+  cursor: grab;
+  transition: all 0.2s ease-out;
 }
 
 .window-header:active {
   cursor: grabbing;
+  background-color: rgba(31, 41, 55, 0.95);
+}
+
+.window-header:hover {
+  background-color: rgba(31, 41, 55, 0.95);
+}
+
+.window-content {
+  @apply p-4 overflow-auto;
+  max-height: calc(90vh - 60px);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(34, 211, 238, 0.5) rgba(31, 41, 55, 0.3);
+}
+
+.window-control {
+  @apply w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white transition-all duration-200;
+  transform-origin: center;
+}
+
+.window-control:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 8px currentColor;
+}
+
+.window-control.minimize {
+  @apply bg-yellow-500;
+}
+
+.window-control.minimize:hover {
+  @apply bg-yellow-400;
+}
+
+.window-control.close {
+  @apply bg-red-500;
+}
+
+.window-control.close:hover {
+  @apply bg-red-400;
 }
 
 /* Enhanced Notifications */
