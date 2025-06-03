@@ -71,9 +71,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
         
         print(f"✅ Current user endpoint test passed")
 
-    def test_02_refresh_jobs_endpoint(self):
+    def test_05_refresh_jobs_endpoint(self):
         """Test the refresh jobs endpoint to ensure we have jobs data"""
-        response = requests.post(f"{self.base_url}/api/jobs/refresh", params={"user_id": self.user_id})
+        response = requests.post(f"{self.base_url}/api/jobs/refresh?session_token={self.session_token}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertIn("message", data)
