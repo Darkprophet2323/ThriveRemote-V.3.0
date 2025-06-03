@@ -285,12 +285,11 @@ class ThriveRemoteAPITester(unittest.TestCase):
         self.assertEqual(data["high_score"], score)
         print(f"✅ Pong score endpoint test passed - Score: {score}")
         
-    def test_16_tasks_upload_download_endpoints(self):
+    def test_19_tasks_upload_download_endpoints(self):
         """Test the tasks upload and download endpoints"""
         # First download current tasks
         download_response = requests.get(
-            f"{self.base_url}/api/tasks/download",
-            params={"user_id": self.user_id}
+            f"{self.base_url}/api/tasks/download?session_token={self.session_token}"
         )
         self.assertEqual(download_response.status_code, 200)
         self.assertEqual(download_response.headers["Content-Type"], "application/json")
@@ -321,9 +320,8 @@ class ThriveRemoteAPITester(unittest.TestCase):
         # Upload tasks
         files = {'file': tasks_file}
         upload_response = requests.post(
-            f"{self.base_url}/api/tasks/upload", 
-            files=files,
-            params={"user_id": self.user_id}
+            f"{self.base_url}/api/tasks/upload?session_token={self.session_token}", 
+            files=files
         )
         self.assertEqual(upload_response.status_code, 200)
         upload_data = upload_response.json()
