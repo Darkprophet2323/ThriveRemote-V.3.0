@@ -436,12 +436,12 @@ const App = () => {
 
     const downloadTasks = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/api/tasks/download`);
+        const response = await fetch(`${BACKEND_URL}/api/tasks/download?user_id=${USER_ID}`);
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'thriveremote_tasks.json';
+        a.download = `thriveremote_tasks_${USER_ID}.json`;
         a.click();
         window.URL.revokeObjectURL(url);
       } catch (error) {
