@@ -331,11 +331,10 @@ class ThriveRemoteAPITester(unittest.TestCase):
         
         print(f"✅ Tasks upload/download endpoints test passed")
         
-    def test_17_realtime_notifications_endpoint(self):
+    def test_20_realtime_notifications_endpoint(self):
         """Test the realtime notifications endpoint"""
         response = requests.get(
-            f"{self.base_url}/api/realtime/notifications",
-            params={"user_id": self.user_id}
+            f"{self.base_url}/api/realtime/notifications?session_token={self.session_token}"
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
