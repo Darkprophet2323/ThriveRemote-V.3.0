@@ -192,16 +192,15 @@ class ThriveRemoteAPITester(unittest.TestCase):
         
         return data["task"]
 
-    def test_10_complete_task_endpoint(self):
+    def test_13_complete_task_endpoint(self):
         """Test completing a task"""
         # Create a task first
-        task = self.test_09_create_task_endpoint()
+        task = self.test_12_create_task_endpoint()
         task_id = task["id"]
         
         # Complete the task
         response = requests.put(
-            f"{self.base_url}/api/tasks/{task_id}/complete", 
-            params={"user_id": self.user_id}
+            f"{self.base_url}/api/tasks/{task_id}/complete?session_token={self.session_token}"
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
