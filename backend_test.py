@@ -22,6 +22,55 @@ class ThriveRemoteAPITester(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         print(f"✅ Root endpoint test passed")
 
+    def test_02_register_endpoint(self):
+        """Test the register endpoint"""
+        register_data = {
+            "username": self.username,
+            "password": self.password,
+            "email": f"{self.username}@example.com"
+        }
+        
+        response = requests.post(f"{self.base_url}/api/auth/register", json=register_data)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("message", data)
+        self.assertIn("session_token", data)
+        self.assertIn("user_id", data)
+        
+        # Save session token and user_id for future tests
+        self.session_token = data["session_token"]
+        self.user_id = data["user_id"]
+        
+        print(f"✅ Register endpoint test passed - Created user {self.username}")
+        
+    def test_03_login_endpoint(self):
+        """Test the login endpoint"""
+        login_data = {
+            "username": self.username,
+            "password": self.password
+        }
+        
+        response = requests.post(f"{self.base_url}/api/auth/login", json=login_data)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("message", data)
+        self.assertIn("session_token", data)
+        
+        # Update session token
+        self.session_token = data["session_token"]
+        
+        print(f"✅ Login endpoint test passed - Logged in as {self.username}")
+
+    def test_04_current_user_endpoint(self):
+        """Test the current user endpoint"""
+        response = requests.get(f"{self.base_url}/api/user/current?session_token={self.session_token}")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["user_id"], self.user_id)
+        self.assertEqual(data["username"], self.username)
+        
+        print(f"✅ Current user endpoint test passed")
+
     def test_02_refresh_jobs_endpoint(self):
         """Test the refresh jobs endpoint to ensure we have jobs data"""
         response = requests.post(f"{self.base_url}/api/jobs/refresh", params={"user_id": self.user_id})
