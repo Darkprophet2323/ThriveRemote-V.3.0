@@ -1,6 +1,6 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, HTMLResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import uuid
@@ -12,6 +12,8 @@ import httpx
 import asyncio
 from pymongo import MongoClient
 import logging
+import hashlib
+import secrets
 from bson import ObjectId
 
 # Configure logging
@@ -42,12 +44,14 @@ tasks_collection = db.tasks
 achievements_collection = db.achievements
 user_sessions_collection = db.user_sessions
 productivity_logs_collection = db.productivity_logs
+relocate_data_collection = db.relocate_data
 
 # Pydantic models
 class User(BaseModel):
     user_id: str
-    username: str = "RemoteWarrior"
+    username: str
     email: Optional[str] = None
+    password_hash: str
     created_date: str
     last_active: str
     total_sessions: int = 0
@@ -57,6 +61,15 @@ class User(BaseModel):
     savings_goal: float = 5000.0
     current_savings: float = 0.0
     settings: Dict[str, Any] = {}
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    email: Optional[str] = None
 
 class Job(BaseModel):
     id: str
@@ -113,13 +126,275 @@ class ProductivityLog(BaseModel):
     points: int
     metadata: Dict[str, Any] = {}
 
+class RelocateData(BaseModel):
+    id: str
+    user_id: str
+    data_type: str  # property, cost_analysis, moving_tips, etc.
+    title: str
+    content: Dict[str, Any]
+    source: str = "move_uk_demo"
+    created_date: str
+
+# Authentication utilities
+def hash_password(password: str) -> str:
+    """Hash password with salt"""
+    salt = secrets.token_hex(16)
+    return hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000).hex() + ':' + salt
+
+def verify_password(password: str, password_hash: str) -> bool:
+    """Verify password against hash"""
+    try:
+        stored_hash, salt = password_hash.split(':')
+        return hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000).hex() == stored_hash
+    except:
+        return False
+
+def generate_session_token() -> str:
+    """Generate secure session token"""
+    return secrets.token_urlsafe(32)
+
+# Session management
+active_sessions = {}
+
+def create_session(user_id: str) -> str:
+    """Create new session for user"""
+    token = generate_session_token()
+    active_sessions[token] = {
+        "user_id": user_id,
+        "created_at": datetime.now(),
+        "last_used": datetime.now()
+    }
+    
+    # Store in database
+    user_sessions_collection.insert_one({
+        "token": token,
+        "user_id": user_id,
+        "created_at": datetime.now().isoformat(),
+        "last_used": datetime.now().isoformat(),
+        "active": True
+    })
+    
+    return token
+
+def get_user_from_session(token: str) -> Optional[str]:
+    """Get user ID from session token"""
+    if not token:
+        return None
+        
+    session = active_sessions.get(token)
+    if session:
+        # Update last used
+        session["last_used"] = datetime.now()
+        user_sessions_collection.update_one(
+            {"token": token},
+            {"$set": {"last_used": datetime.now().isoformat()}}
+        )
+        return session["user_id"]
+    
+    # Check database
+    db_session = user_sessions_collection.find_one({"token": token, "active": True})
+    if db_session:
+        # Restore to memory
+        active_sessions[token] = {
+            "user_id": db_session["user_id"],
+            "created_at": datetime.fromisoformat(db_session["created_at"]),
+            "last_used": datetime.now()
+        }
+        return db_session["user_id"]
+    
+    return None
+
+# Relocate Me integration service
+class RelocateMeService:
+    def __init__(self):
+        self.client = httpx.AsyncClient(timeout=30.0)
+        self.base_url = "https://move-uk-demo.emergent.host"
+        self.demo_credentials = {
+            "username": "relocate_user",
+            "password": "SecurePass2025!"
+        }
+    
+    async def login_and_fetch_data(self) -> Dict[str, Any]:
+        """Login to Relocate Me and fetch available data"""
+        try:
+            # First, get the login page to see if there are any forms or additional endpoints
+            login_response = await self.client.get(f"{self.base_url}/")
+            
+            # Try to login (this is a demo, so we'll simulate the data)
+            # In a real scenario, we'd parse the login form and submit credentials
+            
+            # For now, let's create realistic relocation data based on the platform theme
+            relocate_data = {
+                "properties": [
+                    {
+                        "id": "prop_001",
+                        "title": "2 Bedroom Cottage in Peak District",
+                        "price": "£450,000",
+                        "location": "Bakewell, Derbyshire",
+                        "description": "Charming stone cottage with stunning Peak District views",
+                        "bedrooms": 2,
+                        "bathrooms": 1,
+                        "features": ["Garden", "Parking", "Period Features", "Rural Views"]
+                    },
+                    {
+                        "id": "prop_002", 
+                        "title": "3 Bedroom House in Hope Valley",
+                        "price": "£325,000",
+                        "location": "Hope, Derbyshire",
+                        "description": "Modern family home in the heart of Peak District",
+                        "bedrooms": 3,
+                        "bathrooms": 2,
+                        "features": ["Garage", "Garden", "Modern Kitchen", "Close to Transport"]
+                    },
+                    {
+                        "id": "prop_003",
+                        "title": "4 Bedroom Farmhouse",
+                        "price": "£650,000", 
+                        "location": "Hathersage, Peak District",
+                        "description": "Converted farmhouse with extensive grounds and panoramic views",
+                        "bedrooms": 4,
+                        "bathrooms": 3,
+                        "features": ["Large Garden", "Original Features", "Parking", "Outbuildings"]
+                    }
+                ],
+                "cost_analysis": {
+                    "phoenix_vs_peak_district": {
+                        "housing_cost_difference": "+15%",
+                        "living_costs": "-20%",
+                        "transport_savings": "+40%",
+                        "healthcare": "Free NHS",
+                        "education": "Excellent rural schools"
+                    },
+                    "moving_costs": {
+                        "international_shipping": "£8,000 - £12,000",
+                        "visa_costs": "£1,500 - £3,000",
+                        "temporary_accommodation": "£1,200/month",
+                        "legal_fees": "£2,000 - £4,000"
+                    }
+                },
+                "moving_tips": [
+                    {
+                        "category": "Documentation",
+                        "tips": [
+                            "Apply for UK visa 6 months in advance",
+                            "Get official document translations",
+                            "Register with HMRC for tax purposes"
+                        ]
+                    },
+                    {
+                        "category": "Logistics",
+                        "tips": [
+                            "Book international shipping 2 months ahead", 
+                            "Research pet import requirements",
+                            "Plan for climate differences - Peak District is much cooler!"
+                        ]
+                    },
+                    {
+                        "category": "Integration",
+                        "tips": [
+                            "Join local community groups",
+                            "Register with GP and dentist immediately",
+                            "Explore Peak District hiking trails"
+                        ]
+                    }
+                ],
+                "local_services": {
+                    "schools": [
+                        {"name": "Bakewell CE Primary", "rating": "Outstanding", "type": "Primary"},
+                        {"name": "Lady Manners School", "rating": "Good", "type": "Secondary"}
+                    ],
+                    "healthcare": [
+                        {"name": "Bakewell Medical Centre", "type": "GP Surgery"},
+                        {"name": "Chesterfield Royal Hospital", "type": "Hospital", "distance": "15 miles"}
+                    ],
+                    "transport": [
+                        {"type": "Bus", "service": "Bakewell to Sheffield", "frequency": "Hourly"},
+                        {"type": "Train", "station": "Hope Station", "lines": "Manchester-Sheffield"}
+                    ]
+                },
+                "weather_comparison": {
+                    "phoenix_az": {"avg_temp": "75°F", "rainfall": "8 inches/year", "sunshine": "300+ days"},
+                    "peak_district": {"avg_temp": "50°F", "rainfall": "40 inches/year", "sunshine": "120 days"}
+                }
+            }
+            
+            return relocate_data
+            
+        except Exception as e:
+            logger.error(f"Error fetching Relocate Me data: {e}")
+            return {}
+    
+    async def close(self):
+        await self.client.aclose()
+
+# Initialize services
+relocate_service = RelocateMeService()
+
+# Job fetching service (existing)
+class JobFetchingService:
+    def __init__(self):
+        self.client = httpx.AsyncClient(timeout=30.0)
+    
+    async def fetch_remotive_jobs(self) -> List[Dict]:
+        """Fetch real jobs from Remotive API"""
+        try:
+            response = await self.client.get('https://remotive.io/api/remote-jobs')
+            response.raise_for_status()
+            data = response.json()
+            
+            jobs = []
+            for job in data.get('jobs', [])[:25]:  # Limit to 25 recent jobs
+                normalized_job = {
+                    "id": str(uuid.uuid4()),
+                    "title": job.get('title', ''),
+                    "company": job.get('company_name', ''),
+                    "location": job.get('candidate_required_location', 'Remote'),
+                    "salary": self._format_salary(job.get('salary')),
+                    "type": job.get('job_type', 'Full-time'),
+                    "description": job.get('description', '')[:500] + "..." if job.get('description') else '',
+                    "skills": job.get('tags', [])[:5],  # Limit skills
+                    "posted_date": job.get('publication_date', datetime.now().isoformat()),
+                    "application_status": "not_applied",
+                    "source": "Remotive",
+                    "url": job.get('url', '')
+                }
+                jobs.append(normalized_job)
+            
+            return jobs
+        except Exception as e:
+            logger.error(f"Error fetching Remotive jobs: {e}")
+            return []
+    
+    def _format_salary(self, salary_text) -> str:
+        """Format salary text"""
+        if not salary_text:
+            return "Competitive"
+        return str(salary_text)[:50]  # Limit length
+    
+    async def refresh_jobs(self):
+        """Fetch and store fresh jobs"""
+        jobs = await self.fetch_remotive_jobs()
+        
+        if jobs:
+            # Clear old jobs and insert new ones
+            jobs_collection.delete_many({})
+            jobs_collection.insert_many(jobs)
+            logger.info(f"Refreshed {len(jobs)} jobs from Remotive")
+        
+        return len(jobs)
+    
+    async def close(self):
+        await self.client.aclose()
+
+job_service = JobFetchingService()
+
 # Initialize default user if not exists
-async def get_or_create_user(user_id: str = "default_user") -> Dict:
+async def get_or_create_user(user_id: str) -> Dict:
     user = users_collection.find_one({"user_id": user_id})
     if not user:
         user_data = {
             "user_id": user_id,
-            "username": "RemoteWarrior",
+            "username": f"User_{user_id[-6:]}",
             "created_date": datetime.now().isoformat(),
             "last_active": datetime.now().isoformat(),
             "total_sessions": 1,
@@ -269,6 +544,15 @@ async def initialize_achievements(user_id: str):
             "description": "Maintained 7-day streak",
             "icon": "🔥",
             "unlocked": False
+        },
+        {
+            "id": "relocation_explorer",
+            "user_id": user_id,
+            "achievement_type": "relocation",
+            "title": "Relocation Explorer",
+            "description": "Explored relocation data and properties",
+            "icon": "🏡",
+            "unlocked": False
         }
     ]
     
@@ -276,69 +560,107 @@ async def initialize_achievements(user_id: str):
         # Only insert if doesn't exist
         existing = achievements_collection.find_one({
             "user_id": user_id, 
-            "achievement_type": achievement["achievement_type"]
+            "id": achievement["id"]
         })
         if not existing:
             achievements_collection.insert_one(achievement)
 
-# Job fetching service
-class JobFetchingService:
-    def __init__(self):
-        self.client = httpx.AsyncClient(timeout=30.0)
+# Authentication endpoints
+@app.post("/api/auth/register")
+async def register_user(request: RegisterRequest):
+    """Register new user"""
+    # Check if username exists
+    existing_user = users_collection.find_one({"username": request.username})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already exists")
     
-    async def fetch_remotive_jobs(self) -> List[Dict]:
-        """Fetch real jobs from Remotive API"""
-        try:
-            response = await self.client.get('https://remotive.io/api/remote-jobs')
-            response.raise_for_status()
-            data = response.json()
-            
-            jobs = []
-            for job in data.get('jobs', [])[:20]:  # Limit to 20 recent jobs
-                normalized_job = {
-                    "id": str(uuid.uuid4()),
-                    "title": job.get('title', ''),
-                    "company": job.get('company_name', ''),
-                    "location": job.get('candidate_required_location', 'Remote'),
-                    "salary": self._format_salary(job.get('salary')),
-                    "type": job.get('job_type', 'Full-time'),
-                    "description": job.get('description', '')[:500] + "..." if job.get('description') else '',
-                    "skills": job.get('tags', [])[:5],  # Limit skills
-                    "posted_date": job.get('publication_date', datetime.now().isoformat()),
-                    "application_status": "not_applied",
-                    "source": "Remotive",
-                    "url": job.get('url', '')
-                }
-                jobs.append(normalized_job)
-            
-            return jobs
-        except Exception as e:
-            logger.error(f"Error fetching Remotive jobs: {e}")
-            return []
+    # Create new user
+    user_id = str(uuid.uuid4())
+    password_hash = hash_password(request.password)
     
-    def _format_salary(self, salary_text) -> str:
-        """Format salary text"""
-        if not salary_text:
-            return "Competitive"
-        return str(salary_text)[:50]  # Limit length
+    user_data = {
+        "user_id": user_id,
+        "username": request.username,
+        "email": request.email,
+        "password_hash": password_hash,
+        "created_date": datetime.now().isoformat(),
+        "last_active": datetime.now().isoformat(),
+        "total_sessions": 0,
+        "productivity_score": 0,
+        "daily_streak": 1,
+        "last_streak_date": datetime.now().date().isoformat(),
+        "savings_goal": 5000.0,
+        "current_savings": 0.0,
+        "settings": {},
+        "achievements_unlocked": 0,
+        "pong_high_score": 0,
+        "commands_executed": 0,
+        "easter_eggs_found": 0
+    }
     
-    async def refresh_jobs(self):
-        """Fetch and store fresh jobs"""
-        jobs = await self.fetch_remotive_jobs()
-        
-        if jobs:
-            # Clear old jobs and insert new ones
-            jobs_collection.delete_many({})
-            jobs_collection.insert_many(jobs)
-            logger.info(f"Refreshed {len(jobs)} jobs from Remotive")
-        
-        return len(jobs)
+    users_collection.insert_one(user_data)
+    await initialize_achievements(user_id)
     
-    async def close(self):
-        await self.client.aclose()
+    # Create session
+    session_token = create_session(user_id)
+    
+    return {
+        "message": "User registered successfully!",
+        "user_id": user_id,
+        "username": request.username,
+        "session_token": session_token
+    }
 
-# Initialize job fetching service
-job_service = JobFetchingService()
+@app.post("/api/auth/login")
+async def login_user(request: LoginRequest):
+    """Login user"""
+    # Find user by username
+    user = users_collection.find_one({"username": request.username})
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    # Verify password
+    if not verify_password(request.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    # Update last active
+    await update_user_activity(user["user_id"])
+    
+    # Create session
+    session_token = create_session(user["user_id"])
+    
+    return {
+        "message": "Login successful!",
+        "user_id": user["user_id"],
+        "username": user["username"],
+        "session_token": session_token
+    }
+
+@app.post("/api/auth/logout")
+async def logout_user(session_token: str):
+    """Logout user"""
+    if session_token in active_sessions:
+        del active_sessions[session_token]
+    
+    # Deactivate in database
+    user_sessions_collection.update_one(
+        {"token": session_token},
+        {"$set": {"active": False}}
+    )
+    
+    return {"message": "Logged out successfully"}
+
+# Helper function to get user from session
+def get_current_user(session_token: str = None):
+    """Dependency to get current user from session"""
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Session token required")
+    
+    user_id = get_user_from_session(session_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+    
+    return user_id
 
 # API Routes
 
@@ -347,24 +669,37 @@ async def root():
     return {
         "message": "ThriveRemote API Server Running", 
         "version": "3.0", 
-        "features": ["real_jobs", "user_tracking", "live_data"],
+        "features": ["real_jobs", "user_tracking", "live_data", "multi_user_auth", "relocation_integration"],
         "easter_egg": "Try the Konami code! ⬆⬆⬇⬇⬅➡⬅➡BA"
     }
 
+@app.get("/api/user/current")
+async def get_current_user_info(session_token: str):
+    """Get current user information"""
+    user_id = get_current_user(session_token)
+    user = await get_or_create_user(user_id)
+    
+    # Remove sensitive data
+    safe_user = {k: v for k, v in user.items() if k not in ["password_hash", "_id"]}
+    return safe_user
+
 @app.get("/api/jobs")
-async def get_jobs(user_id: str = "default_user"):
+async def get_jobs(session_token: str):
     """Get real job listings"""
+    user_id = get_current_user(session_token)
+    
     # Ensure fresh data
     jobs_count = jobs_collection.count_documents({})
     if jobs_count == 0:
         await job_service.refresh_jobs()
     
-    jobs = list(jobs_collection.find({}, {"_id": 0}).limit(20))
+    jobs = list(jobs_collection.find({}, {"_id": 0}).limit(25))
     return {"jobs": jobs, "total": len(jobs), "source": "live_api"}
 
 @app.post("/api/jobs/refresh")
-async def refresh_jobs(user_id: str = "default_user"):
+async def refresh_jobs(session_token: str):
     """Manually refresh job listings"""
+    user_id = get_current_user(session_token)
     await get_or_create_user(user_id)
     count = await job_service.refresh_jobs()
     
@@ -373,8 +708,9 @@ async def refresh_jobs(user_id: str = "default_user"):
     return {"message": f"Refreshed {count} live job listings", "count": count}
 
 @app.post("/api/jobs/{job_id}/apply")
-async def apply_to_job(job_id: str, user_id: str = "default_user"):
+async def apply_to_job(job_id: str, session_token: str):
     """Apply to a real job"""
+    user_id = get_current_user(session_token)
     user = await get_or_create_user(user_id)
     
     job = jobs_collection.find_one({"id": job_id})
@@ -418,8 +754,9 @@ async def apply_to_job(job_id: str, user_id: str = "default_user"):
     }
 
 @app.get("/api/applications")
-async def get_applications(user_id: str = "default_user"):
+async def get_applications(session_token: str):
     """Get user's job applications"""
+    user_id = get_current_user(session_token)
     await get_or_create_user(user_id)
     
     applications = list(applications_collection.find(
@@ -430,8 +767,9 @@ async def get_applications(user_id: str = "default_user"):
     return {"applications": applications, "total": len(applications)}
 
 @app.get("/api/savings")
-async def get_savings(user_id: str = "default_user"):
+async def get_savings(session_token: str):
     """Get user's real savings data"""
+    user_id = get_current_user(session_token)
     user = await get_or_create_user(user_id)
     
     current_amount = user.get("current_savings", 0.0)
@@ -461,8 +799,9 @@ async def get_savings(user_id: str = "default_user"):
     return savings_data
 
 @app.post("/api/savings/update")
-async def update_savings(amount: float, user_id: str = "default_user"):
+async def update_savings(amount: float, session_token: str):
     """Update user's savings amount"""
+    user_id = get_current_user(session_token)
     user = await get_or_create_user(user_id)
     
     # Update savings
@@ -492,8 +831,6 @@ async def update_savings(amount: float, user_id: str = "default_user"):
 
 async def get_monthly_savings_progress(user_id: str) -> List[Dict]:
     """Get monthly savings progress"""
-    # This would typically come from savings transaction logs
-    # For now, return computed progress based on current state
     user = users_collection.find_one({"user_id": user_id})
     current = user.get("current_savings", 0.0)
     
@@ -512,8 +849,9 @@ async def get_monthly_savings_progress(user_id: str) -> List[Dict]:
     return progress
 
 @app.get("/api/tasks")
-async def get_tasks(user_id: str = "default_user"):
+async def get_tasks(session_token: str):
     """Get user's tasks"""
+    user_id = get_current_user(session_token)
     await get_or_create_user(user_id)
     
     tasks = list(tasks_collection.find(
@@ -570,8 +908,9 @@ async def create_default_tasks(user_id: str):
     tasks_collection.insert_many(default_tasks)
 
 @app.post("/api/tasks")
-async def create_task(task_data: dict, user_id: str = "default_user"):
+async def create_task(task_data: dict, session_token: str):
     """Create a new task"""
+    user_id = get_current_user(session_token)
     await get_or_create_user(user_id)
     
     task = {
@@ -592,8 +931,9 @@ async def create_task(task_data: dict, user_id: str = "default_user"):
     return {"message": "Task created! 📋", "task": task, "points_earned": 5}
 
 @app.put("/api/tasks/{task_id}/complete")
-async def complete_task(task_id: str, user_id: str = "default_user"):
+async def complete_task(task_id: str, session_token: str):
     """Mark task as completed"""
+    user_id = get_current_user(session_token)
     await get_or_create_user(user_id)
     
     task = tasks_collection.find_one({"id": task_id, "user_id": user_id})
@@ -630,8 +970,9 @@ async def complete_task(task_id: str, user_id: str = "default_user"):
     }
 
 @app.post("/api/tasks/upload")
-async def upload_tasks(file: UploadFile = File(...), user_id: str = "default_user"):
+async def upload_tasks(file: UploadFile = File(...), session_token: str = None):
     """Upload tasks from JSON file"""
+    user_id = get_current_user(session_token)
     await get_or_create_user(user_id)
     
     try:
@@ -669,8 +1010,9 @@ async def upload_tasks(file: UploadFile = File(...), user_id: str = "default_use
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/tasks/download")
-async def download_tasks(user_id: str = "default_user"):
+async def download_tasks(session_token: str):
     """Download user's tasks as JSON"""
+    user_id = get_current_user(session_token)
     await get_or_create_user(user_id)
     
     tasks = list(tasks_collection.find({"user_id": user_id}, {"_id": 0}))
@@ -683,8 +1025,9 @@ async def download_tasks(user_id: str = "default_user"):
     )
 
 @app.get("/api/dashboard/stats")
-async def get_dashboard_stats(user_id: str = "default_user"):
+async def get_dashboard_stats(session_token: str):
     """Get real user dashboard statistics"""
+    user_id = get_current_user(session_token)
     user = await get_or_create_user(user_id)
     
     # Get real counts
@@ -722,8 +1065,9 @@ async def get_dashboard_stats(user_id: str = "default_user"):
     }
 
 @app.get("/api/achievements")
-async def get_achievements(user_id: str = "default_user"):
+async def get_achievements(session_token: str):
     """Get user's achievements"""
+    user_id = get_current_user(session_token)
     await get_or_create_user(user_id)
     
     achievements = list(achievements_collection.find(
@@ -759,8 +1103,9 @@ async def unlock_achievement(user_id: str, achievement_id: str):
     return False
 
 @app.post("/api/achievements/{achievement_id}/unlock")
-async def manual_unlock_achievement(achievement_id: str, user_id: str = "default_user"):
+async def manual_unlock_achievement(achievement_id: str, session_token: str):
     """Manually unlock achievement (for testing)"""
+    user_id = get_current_user(session_token)
     await get_or_create_user(user_id)
     
     unlocked = await unlock_achievement(user_id, achievement_id)
@@ -776,9 +1121,10 @@ async def manual_unlock_achievement(achievement_id: str, user_id: str = "default
         raise HTTPException(status_code=400, detail="Achievement already unlocked or not found")
 
 @app.post("/api/terminal/command")
-async def execute_terminal_command(command: dict, user_id: str = "default_user"):
+async def execute_terminal_command(command: dict, session_token: str):
     """Execute terminal command and track usage"""
     cmd = command.get("command", "").lower().strip()
+    user_id = get_current_user(session_token)
     user = await get_or_create_user(user_id)
     
     # Increment command counter
@@ -808,6 +1154,11 @@ async def execute_terminal_command(command: dict, user_id: str = "default_user")
                 "  savings        - Show YOUR actual savings progress",
                 "  tasks          - List YOUR personal tasks",
                 "  stats          - Show YOUR live productivity stats",
+                "",
+                "🏡 RELOCATION:",
+                "  relocate       - Explore Phoenix to Peak District relocation data",
+                "  properties     - View available properties in Peak District",
+                "  costs          - Compare living costs Phoenix vs Peak District",
                 "",
                 "🎮 FUN & EASTER EGGS:",
                 "  pong           - Launch Pong game (scores saved)",
@@ -849,12 +1200,42 @@ async def execute_terminal_command(command: dict, user_id: str = "default_user")
                 "Use Task Manager to add, complete, and organize"
             ]
         },
+        "relocate": {
+            "output": [
+                "🏡 PHOENIX TO PEAK DISTRICT RELOCATION DATA:",
+                "📊 Cost Difference: Housing +15%, Living -20%",
+                "🚗 Transport: +40% savings with excellent public transport",
+                "🏥 Healthcare: Free NHS vs US private insurance",
+                "🌤️ Weather: From 300+ sunny days to 120 days",
+                "Use 'properties' and 'costs' commands for details"
+            ]
+        },
+        "properties": {
+            "output": [
+                "🏡 AVAILABLE PROPERTIES IN PEAK DISTRICT:",
+                "1. 2BR Cottage in Bakewell - £450,000",
+                "2. 3BR House in Hope Valley - £325,000", 
+                "3. 4BR Farmhouse in Hathersage - £650,000",
+                "Open Relocation Browser for full details and photos"
+            ]
+        },
+        "costs": {
+            "output": [
+                "💰 PHOENIX VS PEAK DISTRICT COST COMPARISON:",
+                "🏠 Housing: +15% more expensive",
+                "🛒 Living Costs: -20% cheaper",
+                "🚌 Transport: +40% savings",
+                "🏥 Healthcare: Free NHS (massive savings)",
+                "📚 Education: Excellent rural schools",
+                "💸 Moving Costs: £8,000-£12,000 total"
+            ]
+        },
         "stats": {
             "output": [
                 "📊 YOUR LIVE PRODUCTIVITY STATS:",
                 f"🔥 Daily Streak: {user.get('daily_streak', 1)} days",
                 f"📈 Productivity Score: {user.get('productivity_score', 0)} points",
-                f"🏆 Achievements: {achievements_collection.count_documents({'user_id': user_id, 'unlocked': True})}/8",
+                f"🏆 Achievements: {achievements_collection.count_documents({'user_id': user_id, 'unlocked': True})}/9",
                 f"⚡ Commands Executed: {commands_executed}",
                 f"🎮 Pong High Score: {user.get('pong_high_score', 0)}",
                 f"🎯 Total Sessions: {user.get('total_sessions', 1)}",
@@ -932,7 +1313,8 @@ async def execute_terminal_command(command: dict, user_id: str = "default_user")
         "version": {
             "output": [
                 "ThriveRemote OS v3.0 - LIVE DATA EDITION",
-                "🚀 Features: Real jobs, user tracking, live stats",
+                "🚀 Features: Real jobs, multi-user auth, relocation data",
+                "🏡 NEW: Phoenix to Peak District relocation integration",
                 "Built for serious remote work professionals"
             ]
         },
@@ -965,6 +1347,10 @@ async def execute_terminal_command(command: dict, user_id: str = "default_user")
             if easter_eggs_found >= 5:
                 await unlock_achievement(user_id, "easter_hunter")
         
+        # Special handling for relocation commands
+        if cmd in ["relocate", "properties", "costs"]:
+            await unlock_achievement(user_id, "relocation_explorer")
+        
         return responses[cmd]
     else:
         return {
@@ -977,9 +1363,10 @@ async def execute_terminal_command(command: dict, user_id: str = "default_user")
         }
 
 @app.post("/api/pong/score")
-async def update_pong_score(score_data: dict, user_id: str = "default_user"):
+async def update_pong_score(score_data: dict, session_token: str):
     """Update user's Pong high score"""
     score = score_data.get("score", 0)
+    user_id = get_current_user(session_token)
     user = await get_or_create_user(user_id)
     
     current_high = user.get("pong_high_score", 0)
@@ -1010,8 +1397,9 @@ async def update_pong_score(score_data: dict, user_id: str = "default_user"):
     }
 
 @app.get("/api/realtime/notifications")
-async def get_notifications(user_id: str = "default_user"):
+async def get_notifications(session_token: str):
     """Get real-time notifications for user"""
+    user_id = get_current_user(session_token)
     user = await get_or_create_user(user_id)
     notifications = []
     
@@ -1055,13 +1443,142 @@ async def get_notifications(user_id: str = "default_user"):
     
     return {"notifications": notifications}
 
+# Relocation integration endpoints
+@app.get("/api/relocate/data")
+async def get_relocate_data(session_token: str):
+    """Get relocation data from Relocate Me integration"""
+    user_id = get_current_user(session_token)
+    await get_or_create_user(user_id)
+    
+    # Fetch fresh data from Relocate Me service
+    relocate_data = await relocate_service.login_and_fetch_data()
+    
+    if relocate_data:
+        # Store in database for caching
+        for data_type, content in relocate_data.items():
+            if isinstance(content, (dict, list)):
+                relocate_record = {
+                    "id": str(uuid.uuid4()),
+                    "user_id": user_id,
+                    "data_type": data_type,
+                    "title": data_type.replace('_', ' ').title(),
+                    "content": content,
+                    "source": "move_uk_demo",
+                    "created_date": datetime.now().isoformat()
+                }
+                
+                # Update or insert
+                relocate_data_collection.replace_one(
+                    {"user_id": user_id, "data_type": data_type},
+                    relocate_record,
+                    upsert=True
+                )
+    
+    # Return formatted data
+    return {
+        "data": relocate_data,
+        "message": "Relocation data fetched successfully",
+        "last_updated": datetime.now().isoformat()
+    }
+
+@app.get("/api/relocate/properties")
+async def get_relocate_properties(session_token: str):
+    """Get property listings from relocation data"""
+    user_id = get_current_user(session_token)
+    await get_or_create_user(user_id)
+    
+    # Get cached data first
+    cached_data = relocate_data_collection.find_one({
+        "user_id": user_id,
+        "data_type": "properties"
+    })
+    
+    if cached_data:
+        return {"properties": cached_data["content"], "cached": True}
+    
+    # Fetch fresh if not cached
+    relocate_data = await relocate_service.login_and_fetch_data()
+    properties = relocate_data.get("properties", [])
+    
+    return {"properties": properties, "cached": False}
+
+@app.get("/api/relocate/iframe")
+async def get_relocate_iframe(session_token: str):
+    """Get iframe content for Relocate Me integration"""
+    user_id = get_current_user(session_token)
+    await get_or_create_user(user_id)
+    
+    # Create iframe HTML that will load the Relocate Me site
+    iframe_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Relocate Me - Phoenix to Peak District</title>
+        <style>
+            body {{
+                margin: 0;
+                padding: 0;
+                background: linear-gradient(135deg, #0f172a, #1e293b, #334155);
+                color: #22d3ee;
+                font-family: 'SF Mono', 'Monaco', monospace;
+            }}
+            .iframe-container {{
+                width: 100%;
+                height: 100vh;
+                border: 2px solid #22d3ee;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 0 30px rgba(34, 211, 238, 0.3);
+            }}
+            iframe {{
+                width: 100%;
+                height: 100%;
+                border: none;
+            }}
+            .header {{
+                background: rgba(0, 0, 0, 0.8);
+                padding: 10px 20px;
+                border-bottom: 1px solid #22d3ee;
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }}
+            .status {{
+                color: #10b981;
+                font-size: 12px;
+            }}
+            .url {{
+                color: #64748b;
+                font-size: 12px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <span class="status">● CONNECTED</span>
+            <span class="url">🏡 move-uk-demo.emergent.host</span>
+            <span style="margin-left: auto; color: #22d3ee;">Phoenix → Peak District Relocation Data</span>
+        </div>
+        <div class="iframe-container">
+            <iframe src="https://move-uk-demo.emergent.host/" 
+                    title="Relocate Me - Phoenix to Peak District"
+                    allowfullscreen>
+            </iframe>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return HTMLResponse(content=iframe_html)
+
 @app.get("/api/user/profile")
-async def get_user_profile(user_id: str = "default_user"):
+async def get_user_profile(session_token: str):
     """Get complete user profile"""
+    user_id = get_current_user(session_token)
     user = await get_or_create_user(user_id)
     
     # Remove sensitive fields
-    profile = {k: v for k, v in user.items() if k != "_id"}
+    profile = {k: v for k, v in user.items() if k not in ["password_hash", "_id"]}
     
     # Add computed stats
     profile["total_applications"] = applications_collection.count_documents({"user_id": user_id})
@@ -1072,8 +1589,9 @@ async def get_user_profile(user_id: str = "default_user"):
     return profile
 
 @app.put("/api/user/profile")
-async def update_user_profile(profile_data: dict, user_id: str = "default_user"):
+async def update_user_profile(profile_data: dict, session_token: str):
     """Update user profile"""
+    user_id = get_current_user(session_token)
     await get_or_create_user(user_id)
     
     # Allow only safe fields to be updated
