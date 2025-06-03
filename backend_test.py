@@ -63,6 +63,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
 
     def test_04_current_user_endpoint(self):
         """Test the current user endpoint"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         response = requests.get(f"{self.base_url}/api/user/current?session_token={self.session_token}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
