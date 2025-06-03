@@ -11,10 +11,10 @@ class ThriveRemoteAPITester(unittest.TestCase):
         self.base_url = "https://48d504fc-72cd-4ce7-9458-aaa85b7c09c6.preview.emergentagent.com"
         self.tests_run = 0
         self.tests_passed = 0
-        self.username = f"test_user_{int(time.time())}"
+        self.username = "testuser123"
         self.password = "TestPass123!"
         self.session_token = None
-        self.user_id = None
+        self.user_id = "e1d2dd25-2219-4aee-ab90-30a4cededd8e"
 
     def test_01_root_endpoint(self):
         """Test the root endpoint"""
