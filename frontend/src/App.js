@@ -498,7 +498,7 @@ const App = () => {
     ]);
 
     const handleTerminalCommand = async (e) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && terminalInput.trim()) {
         const command = terminalInput.trim();
         const newHistory = [...terminalHistory, `thriveremote@system:~$ ${command}`];
         
@@ -508,13 +508,19 @@ const App = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ command })
           });
-          const result = await response.json();
           
-          if (result.output && Array.isArray(result.output)) {
-            newHistory.push(...result.output);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.output && Array.isArray(result.output)) {
+              newHistory.push(...result.output);
+            } else {
+              newHistory.push('Command executed successfully');
+            }
+          } else {
+            newHistory.push(`Server error: ${response.status}`);
           }
         } catch (error) {
-          newHistory.push(`Error executing command: ${command}`);
+          newHistory.push(`Network error: Unable to connect to server`);
           console.error('Terminal command error:', error);
         }
         
