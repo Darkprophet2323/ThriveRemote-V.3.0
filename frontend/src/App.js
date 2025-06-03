@@ -32,17 +32,18 @@ const App = () => {
       });
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const triggerKonamiEasterEgg = async () => {
     try {
-      await fetch(`${BACKEND_URL}/api/terminal/command`, {
+      const response = await fetch(`${BACKEND_URL}/api/terminal/command`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command: 'konami' })
       });
+      const result = await response.json();
       
       setNotifications(prev => [...prev, {
         id: 'konami',
@@ -57,6 +58,8 @@ const App = () => {
       setTimeout(() => {
         document.body.style.animation = '';
       }, 2000);
+      
+      console.log('Konami code activated!', result);
     } catch (error) {
       console.error('Konami easter egg failed:', error);
     }
@@ -396,8 +399,6 @@ const App = () => {
   );
 
   const TaskManager = () => {
-    const [draggedOver, setDraggedOver] = useState(null);
-
     const handleFileUpload = async (event) => {
       const file = event.target.files[0];
       if (!file) return;
@@ -508,9 +509,13 @@ const App = () => {
             body: JSON.stringify({ command })
           });
           const result = await response.json();
-          newHistory.push(...result.output);
+          
+          if (result.output && Array.isArray(result.output)) {
+            newHistory.push(...result.output);
+          }
         } catch (error) {
           newHistory.push(`Error executing command: ${command}`);
+          console.error('Terminal command error:', error);
         }
         
         setTerminalHistory(newHistory);
