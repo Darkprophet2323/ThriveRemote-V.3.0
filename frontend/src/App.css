@@ -776,15 +776,154 @@ body {
   @apply text-red-300;
 }
 
-/* Better Terminal Display */
+/* Enhanced Terminal Styles - Garuda Linux Inspired */
 .terminal-content {
   @apply bg-black bg-opacity-80 rounded-lg p-4 font-mono text-sm;
   min-height: 350px;
   max-height: 500px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Monaco', monospace;
+}
+
+.garuda-terminal {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(15, 23, 42, 0.9));
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  box-shadow: 
+    0 0 20px rgba(34, 211, 238, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.terminal-header-enhanced {
+  @apply text-gray-300 mb-4 pb-2 border-b border-cyan-500 border-opacity-30;
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.1), transparent);
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.terminal-prompt {
+  @apply text-cyan-400 font-bold;
+  text-shadow: 0 0 8px #22d3ee;
+}
+
+.terminal-line {
+  @apply leading-relaxed;
+  font-weight: 400;
+  transition: all 0.2s ease;
+}
+
+.terminal-title {
+  @apply text-cyan-300 font-bold text-lg;
+  text-shadow: 0 0 15px #67e8f9;
+  background: linear-gradient(90deg, #22d3ee, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.terminal-subtitle {
+  @apply text-blue-300 font-semibold;
+  text-shadow: 0 0 10px #3b82f6;
+}
+
+.terminal-command {
+  @apply text-cyan-400;
+  background: rgba(34, 211, 238, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border-left: 3px solid #22d3ee;
+  margin: 2px 0;
+}
+
+.terminal-success {
+  @apply text-green-400;
+  text-shadow: 0 0 8px #10b981;
+}
+
+.terminal-error {
+  @apply text-red-400;
+  text-shadow: 0 0 8px #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.terminal-highlight {
+  @apply text-yellow-300;
+  text-shadow: 0 0 8px #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.terminal-stats {
+  @apply text-purple-300;
+  text-shadow: 0 0 8px #a855f7;
+}
+
+.terminal-relocation {
+  @apply text-orange-300;
+  text-shadow: 0 0 8px #fb923c;
+}
+
+.terminal-gaming {
+  @apply text-pink-300;
+  text-shadow: 0 0 8px #ec4899;
+  background: rgba(236, 72, 153, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.terminal-list {
+  @apply text-gray-300 ml-4;
+  border-left: 2px solid rgba(34, 211, 238, 0.3);
+  padding-left: 8px;
+}
+
+.terminal-tip {
+  @apply text-amber-300;
+  text-shadow: 0 0 8px #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border-left: 3px solid #f59e0b;
+}
+
+.terminal-info {
+  @apply text-blue-300;
+  opacity: 0.8;
 }
 
 .terminal-output {
-  @apply space-y-1 max-h-80 overflow-y-auto;
+  @apply text-gray-300;
+}
+
+.terminal-input-line {
+  @apply flex items-center bg-gray-800 bg-opacity-50 p-3 rounded border border-cyan-500 border-opacity-30;
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.05), rgba(0, 0, 0, 0.3));
+}
+
+.terminal-input {
+  @apply bg-transparent text-white outline-none font-mono text-sm;
+  caret-color: #22d3ee;
+}
+
+.terminal-input::placeholder {
+  @apply text-gray-500;
+}
+
+/* Transparency Slider */
+.transparency-slider {
+  @apply bg-gray-700 rounded-lg appearance-none h-2 w-20;
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.3), rgba(34, 211, 238, 0.8));
+}
+
+.transparency-slider::-webkit-slider-thumb {
+  @apply appearance-none w-4 h-4 bg-cyan-400 rounded-full cursor-pointer;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
+}
+
+.transparency-slider::-moz-range-thumb {
+  @apply w-4 h-4 bg-cyan-400 rounded-full cursor-pointer border-none;
+  box-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
 }
 
 /* Enhanced Responsiveness */
