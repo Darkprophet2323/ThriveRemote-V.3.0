@@ -160,9 +160,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
         updated_savings = self.test_09_savings_endpoint()
         self.assertEqual(updated_savings["current_amount"], new_amount)
 
-    def test_08_tasks_endpoint(self):
+    def test_11_tasks_endpoint(self):
         """Test the tasks endpoint"""
-        response = requests.get(f"{self.base_url}/api/tasks", params={"user_id": self.user_id})
+        response = requests.get(f"{self.base_url}/api/tasks?session_token={self.session_token}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertIn("tasks", data)
