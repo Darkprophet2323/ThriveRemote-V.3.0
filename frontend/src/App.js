@@ -605,7 +605,7 @@ const App = () => {
       if (score > highScore) {
         setHighScore(score);
         try {
-          const response = await fetch(`${BACKEND_URL}/api/pong/score`, {
+          const response = await fetch(`${BACKEND_URL}/api/pong/score?user_id=${USER_ID}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ score })
@@ -616,7 +616,7 @@ const App = () => {
             id: 'pong_score',
             type: 'achievement',
             title: result.message,
-            message: `Score: ${score}`,
+            message: `Score: ${score} (+${result.points_earned} points)`,
             timestamp: new Date().toISOString()
           }]);
         } catch (error) {
