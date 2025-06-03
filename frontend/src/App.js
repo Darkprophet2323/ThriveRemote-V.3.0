@@ -25,6 +25,14 @@ const App = () => {
   const [konamiSequence, setKonamiSequence] = useState([]);
   const [dragging, setDragging] = useState(null);
   const [relocateData, setRelocateData] = useState(null);
+  const [backgroundIndex, setBackgroundIndex] = useState(0);
+
+  // Professional Garuda Linux background images
+  const backgroundImages = [
+    'https://images.unsplash.com/photo-1491466424936-e304919aada7', // Canyon with northern lights
+    'https://images.unsplash.com/photo-1514439827219-9137a0b99245', // Night cityscape 
+    'https://images.unsplash.com/photo-1604818659463-34304eab8e70'  // Futuristic neon wall
+  ];
 
   // Konami code sequence
   const KONAMI_CODE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
