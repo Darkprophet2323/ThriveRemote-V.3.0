@@ -893,16 +893,16 @@ const App = () => {
   const Terminal = () => {
     const [terminalInput, setTerminalInput] = useState('');
     const [terminalHistory, setTerminalHistory] = useState([
-      'ThriveRemote Terminal v3.0 - Multi-User Remote Work Command Center 🚀',
-      'Enhanced with Real Jobs API, Relocation Data & User Authentication!',
-      'Type "help" for available commands',
-      ''
+      { text: 'ThriveRemote Terminal v3.0 - Multi-User Remote Work Command Center 🚀', type: 'title' },
+      { text: 'Enhanced with Real Jobs API, Relocation Data & User Authentication!', type: 'subtitle' },
+      { text: 'Type "help" for available commands', type: 'info' },
+      { text: '', type: 'blank' }
     ]);
 
     const handleTerminalCommand = async (e) => {
       if (e.key === 'Enter' && terminalInput.trim()) {
         const command = terminalInput.trim();
-        const newHistory = [...terminalHistory, `thriveremote@system:~$ ${command}`];
+        const newHistory = [...terminalHistory, { text: `thriveremote@system:~$ ${command}`, type: 'command' }];
         
         try {
           const response = await fetch(`${BACKEND_URL}/api/terminal/command`, {
@@ -914,15 +914,28 @@ const App = () => {
           if (response.ok) {
             const result = await response.json();
             if (result.output && Array.isArray(result.output)) {
-              newHistory.push(...result.output);
+              result.output.forEach(line => {
+                // Determine line type based on content for coloring
+                let lineType = 'output';
+                if (line.includes('✅') || line.includes('SUCCESS') || line.includes('Found')) lineType = 'success';
+                else if (line.includes('❌') || line.includes('ERROR') || line.includes('Failed')) lineType = 'error';
+                else if (line.includes('💰') || line.includes('🔥') || line.includes('📈')) lineType = 'highlight';
+                else if (line.includes('🎯') || line.includes('PRODUCTIVITY') || line.includes('STATS')) lineType = 'stats';
+                else if (line.includes('🏡') || line.includes('RELOCATION') || line.includes('PROPERTIES')) lineType = 'relocation';
+                else if (line.includes('🎮') || line.includes('EASTER') || line.includes('KONAMI')) lineType = 'gaming';
+                else if (line.startsWith('  ') && line.includes('-')) lineType = 'list';
+                else if (line.includes('💡') || line.includes('TIP')) lineType = 'tip';
+                
+                newHistory.push({ text: line, type: lineType });
+              });
             } else {
-              newHistory.push('Command executed successfully');
+              newHistory.push({ text: 'Command executed successfully', type: 'success' });
             }
           } else {
-            newHistory.push(`Server error: ${response.status}`);
+            newHistory.push({ text: `Server error: ${response.status}`, type: 'error' });
           }
         } catch (error) {
-          newHistory.push(`Network error: Unable to connect to server`);
+          newHistory.push({ text: `Network error: Unable to connect to server`, type: 'error' });
           console.error('Terminal command error:', error);
         }
         
@@ -931,15 +944,45 @@ const App = () => {
       }
     };
 
+    const getLineClassName = (type) => {
+      switch (type) {
+        case 'title': return 'terminal-line terminal-title';
+        case 'subtitle': return 'terminal-line terminal-subtitle';
+        case 'command': return 'terminal-line terminal-command';
+        case 'success': return 'terminal-line terminal-success';
+        case 'error': return 'terminal-line terminal-error';
+        case 'highlight': return 'terminal-line terminal-highlight';
+        case 'stats': return 'terminal-line terminal-stats';
+        case 'relocation': return 'terminal-line terminal-relocation';
+        case 'gaming': return 'terminal-line terminal-gaming';
+        case 'list': return 'terminal-line terminal-list';
+        case 'tip': return 'terminal-line terminal-tip';
+        case 'info': return 'terminal-line terminal-info';
+        case 'blank': return 'terminal-line';
+        default: return 'terminal-line terminal-output';
+      }
+    };
+
     return (
-      <div className="terminal-content">
+      <div 
+        className="terminal-content garuda-terminal"
+        style={{
+          backgroundColor: `rgba(0, 0, 0, ${Math.max(0.7, transparency / 100)})`,
+          backdropFilter: `blur(${Math.max(8, (100 - transparency) / 8)}px)`
+        }}
+      >
+        <div className="terminal-header-enhanced">
+          <span className="terminal-prompt">thriveremote@system:~$</span> terminal --garuda-theme --enhanced-colors
+        </div>
         <div className="terminal-output space-y-1 mb-4 max-h-64 overflow-y-auto">
           {terminalHistory.map((line, index) => (
-            <div key={index} className="terminal-line">{line}</div>
+            <div key={index} className={getLineClassName(line.type)}>
+              {line.text}
+            </div>
           ))}
         </div>
         <div className="terminal-input-line">
-          <span className="text-cyan-400">thriveremote@system:~$</span>
+          <span className="terminal-prompt">thriveremote@system:~$</span>
           <input
             type="text"
             value={terminalInput}
