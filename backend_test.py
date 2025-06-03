@@ -270,14 +270,13 @@ class ThriveRemoteAPITester(unittest.TestCase):
             
         print(f"✅ Terminal command endpoint test passed - Tested {len(commands)} commands")
         
-    def test_15_pong_score_endpoint(self):
+    def test_18_pong_score_endpoint(self):
         """Test the pong score endpoint"""
         # Submit a score
         score = 150
         response = requests.post(
-            f"{self.base_url}/api/pong/score", 
-            json={"score": score},
-            params={"user_id": self.user_id}
+            f"{self.base_url}/api/pong/score?session_token={self.session_token}", 
+            json={"score": score}
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
