@@ -2,6 +2,7 @@ import requests
 import unittest
 import sys
 import json
+import io
 
 class ThriveRemoteAPITester(unittest.TestCase):
     def __init__(self, *args, **kwargs):
@@ -77,6 +78,126 @@ class ThriveRemoteAPITester(unittest.TestCase):
         self.assertIn("message", data)
         self.assertIn("application", data)
         print(f"✅ Job apply endpoint test passed")
+        
+    def test_achievements_endpoint(self):
+        """Test the achievements endpoint"""
+        response = requests.get(f"{self.base_url}/api/achievements")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("achievements", data)
+        self.assertTrue(len(data["achievements"]) > 0)
+        print(f"✅ Achievements endpoint test passed - Found {len(data['achievements'])} achievements")
+        
+    def test_achievement_unlock_endpoint(self):
+        """Test the achievement unlock endpoint"""
+        # First get an achievement ID
+        achievements_response = requests.get(f"{self.base_url}/api/achievements")
+        achievements_data = achievements_response.json()
+        # Find a locked achievement
+        locked_achievements = [a for a in achievements_data["achievements"] if not a["unlocked"]]
+        if locked_achievements:
+            achievement_id = locked_achievements[0]["id"]
+            
+            # Unlock the achievement
+            response = requests.post(f"{self.base_url}/api/achievements/{achievement_id}/unlock")
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertIn("message", data)
+            self.assertIn("achievement", data)
+            self.assertTrue(data["achievement"]["unlocked"])
+            print(f"✅ Achievement unlock endpoint test passed")
+        else:
+            print("⚠️ No locked achievements found to test unlock endpoint")
+            
+    def test_terminal_command_endpoint(self):
+        """Test the terminal command endpoint"""
+        # Test various commands
+        commands = ["help", "jobs", "savings", "tasks", "stats", "konami", "matrix", "surprise"]
+        
+        for command in commands:
+            response = requests.post(
+                f"{self.base_url}/api/terminal/command", 
+                json={"command": command}
+            )
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertIn("output", data)
+            self.assertTrue(len(data["output"]) > 0)
+            
+        print(f"✅ Terminal command endpoint test passed - Tested {len(commands)} commands")
+        
+    def test_pong_score_endpoint(self):
+        """Test the pong score endpoint"""
+        # Get current high score
+        stats_response = requests.get(f"{self.base_url}/api/dashboard/stats")
+        stats_data = stats_response.json()
+        current_high_score = stats_data["pong_high_score"]
+        
+        # Submit a new score
+        new_score = current_high_score + 10
+        response = requests.post(
+            f"{self.base_url}/api/pong/score", 
+            json={"score": new_score}
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("message", data)
+        self.assertIn("high_score", data)
+        self.assertEqual(data["high_score"], new_score)
+        print(f"✅ Pong score endpoint test passed - New high score: {new_score}")
+        
+    def test_tasks_upload_download_endpoints(self):
+        """Test the tasks upload and download endpoints"""
+        # First download current tasks
+        download_response = requests.get(f"{self.base_url}/api/tasks/download")
+        self.assertEqual(download_response.status_code, 200)
+        self.assertEqual(download_response.headers["Content-Type"], "application/json")
+        
+        # Prepare tasks for upload
+        tasks_data = [
+            {
+                "id": "test-task-1",
+                "title": "Test Task 1",
+                "description": "This is a test task",
+                "status": "todo",
+                "priority": "high",
+                "category": "testing",
+                "created_date": "2025-03-15"
+            },
+            {
+                "id": "test-task-2",
+                "title": "Test Task 2",
+                "description": "This is another test task",
+                "status": "in_progress",
+                "priority": "medium",
+                "category": "testing",
+                "created_date": "2025-03-15"
+            }
+        ]
+        
+        # Create a file-like object for upload
+        tasks_json = json.dumps(tasks_data)
+        tasks_file = io.BytesIO(tasks_json.encode('utf-8'))
+        tasks_file.name = 'tasks.json'
+        
+        # Upload tasks
+        files = {'file': tasks_file}
+        upload_response = requests.post(f"{self.base_url}/api/tasks/upload", files=files)
+        self.assertEqual(upload_response.status_code, 200)
+        upload_data = upload_response.json()
+        self.assertIn("message", upload_data)
+        self.assertIn("tasks_count", upload_data)
+        self.assertEqual(upload_data["tasks_count"], len(tasks_data))
+        
+        print(f"✅ Tasks upload/download endpoints test passed")
+        
+    def test_realtime_notifications_endpoint(self):
+        """Test the realtime notifications endpoint"""
+        response = requests.get(f"{self.base_url}/api/realtime/notifications")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("notifications", data)
+        print(f"✅ Realtime notifications endpoint test passed - Found {len(data['notifications'])} notifications")
 
 if __name__ == "__main__":
     suite = unittest.TestLoader().loadTestsFromTestCase(ThriveRemoteAPITester)
