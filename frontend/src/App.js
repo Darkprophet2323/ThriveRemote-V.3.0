@@ -212,7 +212,7 @@ const App = () => {
     }
   };
 
-  // Window management with drag support (fixed)
+  // Improved window management with better animations
   const openWindow = (windowId, title, component) => {
     if (!activeWindows.find(w => w.id === windowId)) {
       const newWindow = {
@@ -221,19 +221,35 @@ const App = () => {
         component,
         minimized: false,
         position: { 
-          x: Math.max(50, 50 + (activeWindows.length * 30)), 
-          y: Math.max(50, 50 + (activeWindows.length * 30)) 
+          x: Math.max(50, 50 + (activeWindows.length * 40)), 
+          y: Math.max(50, 50 + (activeWindows.length * 40)) 
         },
         zIndex: 1000 + activeWindows.length,
-        size: { width: 800, height: 600 }
+        size: { width: 800, height: 600 },
+        opening: true
       };
       
       setActiveWindows(prev => [...prev, newWindow]);
+      
+      // Remove opening state after animation
+      setTimeout(() => {
+        setActiveWindows(windows => windows.map(w => 
+          w.id === windowId ? { ...w, opening: false } : w
+        ));
+      }, 300);
     }
   };
 
   const closeWindow = (windowId) => {
-    setActiveWindows(activeWindows.filter(w => w.id !== windowId));
+    // Add closing animation
+    setActiveWindows(windows => windows.map(w => 
+      w.id === windowId ? { ...w, closing: true } : w
+    ));
+    
+    // Remove window after animation
+    setTimeout(() => {
+      setActiveWindows(windows => windows.filter(w => w.id !== windowId));
+    }, 300);
   };
 
   const minimizeWindow = (windowId) => {
@@ -247,6 +263,19 @@ const App = () => {
     setActiveWindows(activeWindows.map(w => 
       w.id === windowId ? { ...w, zIndex: maxZ + 1 } : w
     ));
+  };
+
+  // Background switcher
+  const switchBackground = () => {
+    setBackgroundIndex((prev) => (prev + 1) % backgroundImages.length);
+    
+    setNotifications(prev => [...prev, {
+      id: 'background_switch',
+      type: 'info',
+      title: '🖼️ Background Changed',
+      message: 'Switched to new Garuda Linux theme',
+      timestamp: new Date().toISOString()
+    }]);
   };
 
   // Improved drag functionality
