@@ -42,7 +42,7 @@ const App = () => {
       const response = await fetch(`${BACKEND_URL}/api/terminal/command`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: 'konami' })
+        body: JSON.stringify({ command: 'konami', user_id: USER_ID })
       });
       const result = await response.json();
       
