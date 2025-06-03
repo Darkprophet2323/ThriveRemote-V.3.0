@@ -143,12 +143,11 @@ class ThriveRemoteAPITester(unittest.TestCase):
         
         return data
 
-    def test_07_update_savings_endpoint(self):
+    def test_10_update_savings_endpoint(self):
         """Test updating savings"""
         new_amount = 1000.0
         response = requests.post(
-            f"{self.base_url}/api/savings/update", 
-            params={"user_id": self.user_id, "amount": new_amount}
+            f"{self.base_url}/api/savings/update?session_token={self.session_token}&amount={new_amount}"
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -158,7 +157,7 @@ class ThriveRemoteAPITester(unittest.TestCase):
         print(f"✅ Update savings endpoint test passed - New amount: ${new_amount}")
         
         # Verify the update
-        updated_savings = self.test_06_savings_endpoint()
+        updated_savings = self.test_09_savings_endpoint()
         self.assertEqual(updated_savings["current_amount"], new_amount)
 
     def test_08_tasks_endpoint(self):
