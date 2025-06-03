@@ -1415,11 +1415,18 @@ const App = () => {
             top: window.position.y,
             zIndex: window.zIndex,
             width: window.size.width,
-            height: window.size.height
+            height: window.size.height,
+            backgroundColor: `rgba(17, 24, 39, ${transparency / 100})`,
+            backdropFilter: `blur(${Math.max(5, (100 - transparency) / 10)}px)`
           }}
           onMouseDown={(e) => handleMouseDown(e, window.id)}
         >
-          <div className="window-header">
+          <div 
+            className="window-header"
+            style={{
+              backgroundColor: `rgba(31, 41, 55, ${Math.min(0.95, transparency / 100 + 0.1)})`
+            }}
+          >
             <div className="window-title">{window.title}</div>
             <div className="window-controls">
               <button
