@@ -311,7 +311,7 @@ const App = () => {
 
   const applyToJob = async (jobId) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/jobs/${jobId}/apply`, {
+      const response = await fetch(`${BACKEND_URL}/api/jobs/${jobId}/apply?user_id=${USER_ID}`, {
         method: 'POST'
       });
       const result = await response.json();
@@ -320,7 +320,7 @@ const App = () => {
         id: `apply_${jobId}`,
         type: 'success',
         title: '🎯 Application Sent!',
-        message: result.message,
+        message: `${result.message} (+${result.points_earned} points)`,
         timestamp: new Date().toISOString()
       }]);
       
@@ -328,6 +328,11 @@ const App = () => {
       setJobs(jobs.map(job => 
         job.id === jobId ? { ...job, application_status: 'applied' } : job
       ));
+      
+      // Refresh data to show updated stats
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       console.error('Error applying to job:', error);
     }
