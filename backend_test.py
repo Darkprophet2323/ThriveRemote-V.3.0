@@ -83,9 +83,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
         # Wait a moment for jobs to be processed
         time.sleep(1)
 
-    def test_03_jobs_endpoint(self):
+    def test_06_jobs_endpoint(self):
         """Test the jobs endpoint"""
-        response = requests.get(f"{self.base_url}/api/jobs", params={"user_id": self.user_id})
+        response = requests.get(f"{self.base_url}/api/jobs?session_token={self.session_token}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertIn("jobs", data)
