@@ -140,13 +140,13 @@ const App = () => {
     const fetchData = async () => {
       try {
         const [jobsRes, appsRes, savingsRes, tasksRes, statsRes, achievementsRes, notificationsRes] = await Promise.all([
-          fetch(`${BACKEND_URL}/api/jobs`),
-          fetch(`${BACKEND_URL}/api/applications`),
-          fetch(`${BACKEND_URL}/api/savings`),
-          fetch(`${BACKEND_URL}/api/tasks`),
-          fetch(`${BACKEND_URL}/api/dashboard/stats`),
-          fetch(`${BACKEND_URL}/api/achievements`),
-          fetch(`${BACKEND_URL}/api/realtime/notifications`)
+          fetch(`${BACKEND_URL}/api/jobs?user_id=${USER_ID}`),
+          fetch(`${BACKEND_URL}/api/applications?user_id=${USER_ID}`),
+          fetch(`${BACKEND_URL}/api/savings?user_id=${USER_ID}`),
+          fetch(`${BACKEND_URL}/api/tasks?user_id=${USER_ID}`),
+          fetch(`${BACKEND_URL}/api/dashboard/stats?user_id=${USER_ID}`),
+          fetch(`${BACKEND_URL}/api/achievements?user_id=${USER_ID}`),
+          fetch(`${BACKEND_URL}/api/realtime/notifications?user_id=${USER_ID}`)
         ]);
 
         setJobs((await jobsRes.json()).jobs);
