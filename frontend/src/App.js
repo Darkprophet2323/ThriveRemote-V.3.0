@@ -1314,8 +1314,19 @@ const App = () => {
 
   return (
     <div className="os-desktop">
-      {/* Desktop Background */}
-      <div className="desktop-bg"></div>
+      {/* Dynamic Desktop Background */}
+      <div 
+        className="desktop-bg"
+        style={{
+          backgroundImage: `
+            linear-gradient(rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8)),
+            url('${backgroundImages[backgroundIndex]}'),
+            radial-gradient(circle at 25% 25%, #3b82f6 0%, transparent 50%),
+            radial-gradient(circle at 75% 75%, #8b5cf6 0%, transparent 50%),
+            radial-gradient(circle at 50% 50%, #06b6d4 0%, transparent 50%)
+          `
+        }}
+      ></div>
       
       {/* Notification System */}
       <div className="notification-container">
