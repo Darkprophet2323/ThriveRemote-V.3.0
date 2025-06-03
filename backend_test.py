@@ -99,10 +99,10 @@ class ThriveRemoteAPITester(unittest.TestCase):
             
         return data["jobs"]
 
-    def test_04_job_apply_endpoint(self):
+    def test_07_job_apply_endpoint(self):
         """Test the job apply endpoint"""
         # First get jobs
-        jobs = self.test_03_jobs_endpoint()
+        jobs = self.test_06_jobs_endpoint()
         
         if not jobs:
             print("⚠️ Skipping job apply test - No jobs available")
@@ -113,8 +113,7 @@ class ThriveRemoteAPITester(unittest.TestCase):
         
         # Apply to the job
         response = requests.post(
-            f"{self.base_url}/api/jobs/{job_id}/apply", 
-            params={"user_id": self.user_id}
+            f"{self.base_url}/api/jobs/{job_id}/apply?session_token={self.session_token}"
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
