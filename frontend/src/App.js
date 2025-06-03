@@ -2,9 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
-const USER_ID = 'default_user'; // In production, this would come from authentication
 
 const App = () => {
+  // Authentication state
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [sessionToken, setSessionToken] = useState(localStorage.getItem('session_token'));
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showLogin, setShowLogin] = useState(true);
+  const [loginData, setLoginData] = useState({ username: '', password: '' });
+  const [registerData, setRegisterData] = useState({ username: '', password: '', email: '' });
+
+  // Application state
   const [activeWindows, setActiveWindows] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [applications, setApplications] = useState([]);
@@ -16,9 +24,137 @@ const App = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [konamiSequence, setKonamiSequence] = useState([]);
   const [dragging, setDragging] = useState(null);
+  const [relocateData, setRelocateData] = useState(null);
 
   // Konami code sequence
   const KONAMI_CODE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
+
+  // Authentication functions
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setSessionToken(result.session_token);
+        localStorage.setItem('session_token', result.session_token);
+        setCurrentUser({ user_id: result.user_id, username: result.username });
+        setIsLoggedIn(true);
+        
+        setNotifications(prev => [...prev, {
+          id: 'login_success',
+          type: 'success',
+          title: '🎉 Welcome Back!',
+          message: `Welcome back, ${result.username}!`,
+          timestamp: new Date().toISOString()
+        }]);
+      } else {
+        const error = await response.json();
+        setNotifications(prev => [...prev, {
+          id: 'login_error',
+          type: 'error',
+          title: '❌ Login Failed',
+          message: error.detail || 'Invalid credentials',
+          timestamp: new Date().toISOString()
+        }]);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(registerData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setSessionToken(result.session_token);
+        localStorage.setItem('session_token', result.session_token);
+        setCurrentUser({ user_id: result.user_id, username: result.username });
+        setIsLoggedIn(true);
+        
+        setNotifications(prev => [...prev, {
+          id: 'register_success',
+          type: 'success',
+          title: '🎉 Account Created!',
+          message: `Welcome to ThriveRemote, ${result.username}!`,
+          timestamp: new Date().toISOString()
+        }]);
+      } else {
+        const error = await response.json();
+        setNotifications(prev => [...prev, {
+          id: 'register_error',
+          type: 'error',
+          title: '❌ Registration Failed',
+          message: error.detail || 'Registration failed',
+          timestamp: new Date().toISOString()
+        }]);
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch(`${BACKEND_URL}/api/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_token: sessionToken })
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
+    localStorage.removeItem('session_token');
+    setSessionToken(null);
+    setCurrentUser(null);
+    setIsLoggedIn(false);
+    setActiveWindows([]);
+    
+    setNotifications(prev => [...prev, {
+      id: 'logout_success',
+      type: 'info',
+      title: '👋 Logged Out',
+      message: 'Come back soon!',
+      timestamp: new Date().toISOString()
+    }]);
+  };
+
+  // Check session on load
+  useEffect(() => {
+    const checkSession = async () => {
+      const token = localStorage.getItem('session_token');
+      if (token) {
+        try {
+          const response = await fetch(`${BACKEND_URL}/api/user/current?session_token=${token}`);
+          if (response.ok) {
+            const user = await response.json();
+            setCurrentUser(user);
+            setSessionToken(token);
+            setIsLoggedIn(true);
+          } else {
+            localStorage.removeItem('session_token');
+          }
+        } catch (error) {
+          localStorage.removeItem('session_token');
+        }
+      }
+    };
+
+    checkSession();
+  }, []);
 
   // Handle Konami code
   useEffect(() => {
@@ -35,14 +171,16 @@ const App = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [sessionToken]);
 
   const triggerKonamiEasterEgg = async () => {
+    if (!sessionToken) return;
+    
     try {
       const response = await fetch(`${BACKEND_URL}/api/terminal/command`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: 'konami', user_id: USER_ID })
+        body: JSON.stringify({ command: 'konami', session_token: sessionToken })
       });
       const result = await response.json();
       
@@ -66,17 +204,23 @@ const App = () => {
     }
   };
 
-  // Window management with drag support
+  // Window management with drag support (fixed)
   const openWindow = (windowId, title, component) => {
     if (!activeWindows.find(w => w.id === windowId)) {
-      setActiveWindows([...activeWindows, {
+      const newWindow = {
         id: windowId,
         title,
         component,
         minimized: false,
-        position: { x: 50 + (activeWindows.length * 30), y: 50 + (activeWindows.length * 30) },
-        zIndex: 1000 + activeWindows.length
-      }]);
+        position: { 
+          x: Math.max(50, 50 + (activeWindows.length * 30)), 
+          y: Math.max(50, 50 + (activeWindows.length * 30)) 
+        },
+        zIndex: 1000 + activeWindows.length,
+        size: { width: 800, height: 600 }
+      };
+      
+      setActiveWindows(prev => [...prev, newWindow]);
     }
   };
 
@@ -97,65 +241,76 @@ const App = () => {
     ));
   };
 
-  // Drag functionality
+  // Improved drag functionality
   const handleMouseDown = (e, windowId) => {
     if (e.target.classList.contains('window-header') || e.target.classList.contains('window-title')) {
       const window = activeWindows.find(w => w.id === windowId);
-      setDragging({
-        windowId,
-        startX: e.clientX - window.position.x,
-        startY: e.clientY - window.position.y
-      });
-      bringToFront(windowId);
+      if (window) {
+        setDragging({
+          windowId,
+          startX: e.clientX - window.position.x,
+          startY: e.clientY - window.position.y
+        });
+        bringToFront(windowId);
+        e.preventDefault();
+      }
     }
   };
 
   const handleMouseMove = useCallback((e) => {
     if (dragging) {
+      const newX = Math.max(0, Math.min(window.innerWidth - 300, e.clientX - dragging.startX));
+      const newY = Math.max(0, Math.min(window.innerHeight - 200, e.clientY - dragging.startY));
+      
       setActiveWindows(windows => windows.map(w => 
         w.id === dragging.windowId 
-          ? { ...w, position: { x: e.clientX - dragging.startX, y: e.clientY - dragging.startY } }
+          ? { ...w, position: { x: newX, y: newY } }
           : w
       ));
     }
   }, [dragging]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setDragging(null);
-  };
+  }, []);
 
   useEffect(() => {
     if (dragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'grabbing';
+      
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = 'default';
       };
     }
-  }, [dragging, handleMouseMove]);
+  }, [dragging, handleMouseMove, handleMouseUp]);
 
   // Fetch data and setup real-time updates
   useEffect(() => {
+    if (!isLoggedIn || !sessionToken) return;
+
     const fetchData = async () => {
       try {
         const [jobsRes, appsRes, savingsRes, tasksRes, statsRes, achievementsRes, notificationsRes] = await Promise.all([
-          fetch(`${BACKEND_URL}/api/jobs?user_id=${USER_ID}`),
-          fetch(`${BACKEND_URL}/api/applications?user_id=${USER_ID}`),
-          fetch(`${BACKEND_URL}/api/savings?user_id=${USER_ID}`),
-          fetch(`${BACKEND_URL}/api/tasks?user_id=${USER_ID}`),
-          fetch(`${BACKEND_URL}/api/dashboard/stats?user_id=${USER_ID}`),
-          fetch(`${BACKEND_URL}/api/achievements?user_id=${USER_ID}`),
-          fetch(`${BACKEND_URL}/api/realtime/notifications?user_id=${USER_ID}`)
+          fetch(`${BACKEND_URL}/api/jobs?session_token=${sessionToken}`),
+          fetch(`${BACKEND_URL}/api/applications?session_token=${sessionToken}`),
+          fetch(`${BACKEND_URL}/api/savings?session_token=${sessionToken}`),
+          fetch(`${BACKEND_URL}/api/tasks?session_token=${sessionToken}`),
+          fetch(`${BACKEND_URL}/api/dashboard/stats?session_token=${sessionToken}`),
+          fetch(`${BACKEND_URL}/api/achievements?session_token=${sessionToken}`),
+          fetch(`${BACKEND_URL}/api/realtime/notifications?session_token=${sessionToken}`)
         ]);
 
-        setJobs((await jobsRes.json()).jobs);
-        setApplications((await appsRes.json()).applications);
-        setSavings(await savingsRes.json());
-        setTasks((await tasksRes.json()).tasks);
-        setDashboardStats(await statsRes.json());
-        setAchievements((await achievementsRes.json()).achievements);
-        setNotifications((await notificationsRes.json()).notifications);
+        if (jobsRes.ok) setJobs((await jobsRes.json()).jobs);
+        if (appsRes.ok) setApplications((await appsRes.json()).applications);
+        if (savingsRes.ok) setSavings(await savingsRes.json());
+        if (tasksRes.ok) setTasks((await tasksRes.json()).tasks);
+        if (statsRes.ok) setDashboardStats(await statsRes.json());
+        if (achievementsRes.ok) setAchievements((await achievementsRes.json()).achievements);
+        if (notificationsRes.ok) setNotifications(prev => [...prev, ...(await notificationsRes.json()).notifications]);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -166,16 +321,18 @@ const App = () => {
     // Real-time updates every 30 seconds
     const dataInterval = setInterval(fetchData, 30000);
     
-    // Update time every second
-    const timeInterval = setInterval(() => setCurrentTime(new Date()), 1000);
-    
     return () => {
       clearInterval(dataInterval);
-      clearInterval(timeInterval);
     };
+  }, [isLoggedIn, sessionToken]);
+
+  // Update time every second
+  useEffect(() => {
+    const timeInterval = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timeInterval);
   }, []);
 
-  // Desktop Applications (Enhanced)
+  // Desktop Applications (Enhanced with Relocation Browser)
   const applications_list = [
     { id: 'dashboard', name: 'Dashboard', icon: '📊', component: 'Dashboard' },
     { id: 'jobs', name: 'Job Search', icon: '💼', component: 'JobSearch' },
@@ -184,7 +341,8 @@ const App = () => {
     { id: 'terminal', name: 'Terminal', icon: '⚡', component: 'Terminal' },
     { id: 'skills', name: 'Skills', icon: '🎓', component: 'SkillDev' },
     { id: 'pong', name: 'Pong Game', icon: '🎮', component: 'PongGame' },
-    { id: 'achievements', name: 'Achievements', icon: '🏆', component: 'Achievements' }
+    { id: 'achievements', name: 'Achievements', icon: '🏆', component: 'Achievements' },
+    { id: 'relocate', name: 'Relocate Browser', icon: '🏡', component: 'RelocateBrowser' }
   ];
 
   // Notification system
@@ -204,11 +362,106 @@ const App = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // Login/Register Form Component
+  const LoginForm = () => (
+    <div className="login-container">
+      <div className="login-form">
+        <div className="login-header">
+          <h1 className="login-title">ThriveRemote OS v3.0</h1>
+          <p className="login-subtitle">Remote Work Command Center</p>
+        </div>
+        
+        <div className="auth-tabs">
+          <button 
+            className={`auth-tab ${showLogin ? 'active' : ''}`}
+            onClick={() => setShowLogin(true)}
+          >
+            Login
+          </button>
+          <button 
+            className={`auth-tab ${!showLogin ? 'active' : ''}`}
+            onClick={() => setShowLogin(false)}
+          >
+            Register
+          </button>
+        </div>
+
+        {showLogin ? (
+          <form onSubmit={handleLogin} className="auth-form">
+            <div className="form-group">
+              <label>Username</label>
+              <input
+                type="text"
+                value={loginData.username}
+                onChange={(e) => setLoginData({...loginData, username: e.target.value})}
+                placeholder="Enter your username"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Password</label>
+              <input
+                type="password"
+                value={loginData.password}
+                onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+            <button type="submit" className="auth-button">
+              🚀 Login to ThriveRemote
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleRegister} className="auth-form">
+            <div className="form-group">
+              <label>Username</label>
+              <input
+                type="text"
+                value={registerData.username}
+                onChange={(e) => setRegisterData({...registerData, username: e.target.value})}
+                placeholder="Choose a username"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Email (Optional)</label>
+              <input
+                type="email"
+                value={registerData.email}
+                onChange={(e) => setRegisterData({...registerData, email: e.target.value})}
+                placeholder="your@email.com"
+              />
+            </div>
+            <div className="form-group">
+              <label>Password</label>
+              <input
+                type="password"
+                value={registerData.password}
+                onChange={(e) => setRegisterData({...registerData, password: e.target.value})}
+                placeholder="Create a strong password"
+                required
+              />
+            </div>
+            <button type="submit" className="auth-button">
+              ✨ Create Account
+            </button>
+          </form>
+        )}
+
+        <div className="login-footer">
+          <p>🎮 Try the Konami code after login: ↑↑↓↓←→←→BA</p>
+          <p>🏡 Explore Phoenix to Peak District relocation data</p>
+        </div>
+      </div>
+    </div>
+  );
+
   // Window Components
   const Dashboard = () => (
     <div className="terminal-content">
       <div className="terminal-header">
-        <span className="text-cyan-400">thriveremote@system:~$</span> dashboard --stats --realtime
+        <span className="text-cyan-400">thriveremote@system:~$</span> dashboard --stats --realtime --user={currentUser?.username}
       </div>
       {dashboardStats && (
         <>
@@ -241,7 +494,7 @@ const App = () => {
               <div className="stat-label">📈 Productivity</div>
             </div>
             <div className="stat-card achievement-glow">
-              <div className="stat-value text-yellow-400">{dashboardStats.achievements_unlocked}/6</div>
+              <div className="stat-value text-yellow-400">{dashboardStats.achievements_unlocked}/9</div>
               <div className="stat-label">🏆 Achievements</div>
             </div>
             <div className="stat-card achievement-glow">
@@ -265,6 +518,9 @@ const App = () => {
         <div className="terminal-line">
           <span className="text-orange-400">🔥</span> Streak Bonus: ${savings?.streak_bonus || 0}
         </div>
+        <div className="terminal-line">
+          <span className="text-cyan-400">👤</span> User: {currentUser?.username}
+        </div>
       </div>
     </div>
   );
@@ -280,7 +536,7 @@ const App = () => {
           className="apply-btn mr-2"
           onClick={async () => {
             try {
-              const response = await fetch(`${BACKEND_URL}/api/jobs/refresh?user_id=${USER_ID}`, {
+              const response = await fetch(`${BACKEND_URL}/api/jobs/refresh?session_token=${sessionToken}`, {
                 method: 'POST'
               });
               const result = await response.json();
@@ -355,7 +611,7 @@ const App = () => {
 
   const applyToJob = async (jobId) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/jobs/${jobId}/apply?user_id=${USER_ID}`, {
+      const response = await fetch(`${BACKEND_URL}/api/jobs/${jobId}/apply?session_token=${sessionToken}`, {
         method: 'POST'
       });
       const result = await response.json();
@@ -389,10 +645,8 @@ const App = () => {
       if (!newAmount || isNaN(newAmount)) return;
       
       try {
-        const response = await fetch(`${BACKEND_URL}/api/savings/update?user_id=${USER_ID}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: parseFloat(newAmount), user_id: USER_ID })
+        const response = await fetch(`${BACKEND_URL}/api/savings/update?session_token=${sessionToken}&amount=${parseFloat(newAmount)}`, {
+          method: 'POST'
         });
         const result = await response.json();
         
@@ -511,7 +765,7 @@ const App = () => {
       formData.append('file', file);
 
       try {
-        const response = await fetch(`${BACKEND_URL}/api/tasks/upload?user_id=${USER_ID}`, {
+        const response = await fetch(`${BACKEND_URL}/api/tasks/upload?session_token=${sessionToken}`, {
           method: 'POST',
           body: formData
         });
@@ -534,12 +788,12 @@ const App = () => {
 
     const downloadTasks = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/api/tasks/download?user_id=${USER_ID}`);
+        const response = await fetch(`${BACKEND_URL}/api/tasks/download?session_token=${sessionToken}`);
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `thriveremote_tasks_${USER_ID}.json`;
+        a.download = `thriveremote_tasks_${currentUser?.username}.json`;
         a.click();
         window.URL.revokeObjectURL(url);
       } catch (error) {
@@ -598,8 +852,8 @@ const App = () => {
   const Terminal = () => {
     const [terminalInput, setTerminalInput] = useState('');
     const [terminalHistory, setTerminalHistory] = useState([
-      'ThriveRemote Terminal v2.0 - Remote Work Command Center 🚀',
-      'Enhanced with Easter Eggs, Real-time Stats & Productivity Boosters!',
+      'ThriveRemote Terminal v3.0 - Multi-User Remote Work Command Center 🚀',
+      'Enhanced with Real Jobs API, Relocation Data & User Authentication!',
       'Type "help" for available commands',
       ''
     ]);
@@ -613,7 +867,7 @@ const App = () => {
           const response = await fetch(`${BACKEND_URL}/api/terminal/command`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ command, user_id: USER_ID })
+            body: JSON.stringify({ command, session_token: sessionToken })
           });
           
           if (response.ok) {
@@ -651,7 +905,7 @@ const App = () => {
             onChange={(e) => setTerminalInput(e.target.value)}
             onKeyDown={handleTerminalCommand}
             className="terminal-input ml-2 flex-1"
-            placeholder="Enter command... (try 'help', 'surprise', or 'konami')"
+            placeholder="Enter command... (try 'help', 'relocate', or 'properties')"
             autoFocus
           />
         </div>
@@ -706,7 +960,7 @@ const App = () => {
       if (score > highScore) {
         setHighScore(score);
         try {
-          const response = await fetch(`${BACKEND_URL}/api/pong/score?user_id=${USER_ID}`, {
+          const response = await fetch(`${BACKEND_URL}/api/pong/score?session_token=${sessionToken}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ score })
@@ -743,7 +997,7 @@ const App = () => {
     return (
       <div className="terminal-content">
         <div className="terminal-header">
-          <span className="text-cyan-400">thriveremote@system:~$</span> pong --retro --addictive
+          <span className="text-cyan-400">thriveremote@system:~$</span> pong --retro --addictive --user-scores
         </div>
         
         <div className="text-center mb-4">
@@ -784,7 +1038,7 @@ const App = () => {
   const Achievements = () => (
     <div className="terminal-content">
       <div className="terminal-header">
-        <span className="text-cyan-400">thriveremote@system:~$</span> achievements --list --progress
+        <span className="text-cyan-400">thriveremote@system:~$</span> achievements --list --progress --user={currentUser?.username}
       </div>
       <div className="space-y-3 mt-4 max-h-96 overflow-y-auto">
         {achievements.map((achievement, index) => (
@@ -852,17 +1106,154 @@ const App = () => {
         </div>
         <div className="skill-progress">
           <div className="flex justify-between text-white mb-1">
-            <span>System Design</span>
+            <span>Relocation Planning</span>
             <span>Beginner (25%)</span>
           </div>
           <div className="progress-bar">
             <div className="progress-fill" style={{ width: '25%' }}></div>
           </div>
-          <div className="text-xs text-gray-400 mt-1">Next: Load Balancing Strategies</div>
+          <div className="text-xs text-gray-400 mt-1">Next: International Moving Strategies</div>
         </div>
       </div>
     </div>
   );
+
+  const RelocateBrowser = () => {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    const fetchRelocateData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${BACKEND_URL}/api/relocate/data?session_token=${sessionToken}`);
+        if (response.ok) {
+          const data = await response.json();
+          setRelocateData(data);
+        } else {
+          setError('Failed to load relocation data');
+        }
+      } catch (err) {
+        setError('Network error loading relocation data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    useEffect(() => {
+      if (sessionToken) {
+        fetchRelocateData();
+      }
+    }, [sessionToken]);
+
+    return (
+      <div className="terminal-content">
+        <div className="terminal-header">
+          <span className="text-cyan-400">thriveremote@system:~$</span> relocate --browser --phoenix-to-peak-district
+        </div>
+        
+        <div className="mb-4 flex gap-2">
+          <button 
+            className="apply-btn"
+            onClick={fetchRelocateData}
+            disabled={loading}
+          >
+            🔄 {loading ? 'Loading...' : 'Refresh Data'}
+          </button>
+          <button 
+            className="apply-btn"
+            onClick={() => {
+              const iframe = document.getElementById('relocate-iframe');
+              if (iframe) {
+                iframe.src = `${BACKEND_URL}/api/relocate/iframe?session_token=${sessionToken}`;
+              }
+            }}
+          >
+            🌐 Open Live Site
+          </button>
+        </div>
+
+        <div className="relocate-browser">
+          {loading && (
+            <div className="text-center py-8">
+              <div className="text-cyan-400">🔄 Loading Phoenix to Peak District relocation data...</div>
+            </div>
+          )}
+          
+          {error && (
+            <div className="text-center py-8">
+              <div className="text-red-400">❌ {error}</div>
+              <button className="apply-btn mt-2" onClick={fetchRelocateData}>
+                Try Again
+              </button>
+            </div>
+          )}
+
+          {relocateData && (
+            <div className="space-y-6">
+              {relocateData.data?.properties && (
+                <div className="relocate-section">
+                  <h3 className="text-white font-bold mb-3">🏡 Available Properties</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {relocateData.data.properties.slice(0, 4).map((property, index) => (
+                      <div key={property.id} className="property-card">
+                        <h4 className="text-cyan-400 font-bold">{property.title}</h4>
+                        <p className="text-green-400 font-semibold">{property.price}</p>
+                        <p className="text-gray-300 text-sm">{property.location}</p>
+                        <p className="text-gray-400 text-xs mt-1">{property.description}</p>
+                        <div className="flex gap-1 mt-2">
+                          {property.features?.slice(0, 3).map(feature => (
+                            <span key={feature} className="feature-tag">{feature}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {relocateData.data?.cost_analysis && (
+                <div className="relocate-section">
+                  <h3 className="text-white font-bold mb-3">💰 Cost Analysis</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="cost-card">
+                      <h4 className="text-yellow-400">Phoenix vs Peak District</h4>
+                      <div className="space-y-1 text-sm">
+                        <div>Housing: <span className="text-red-400">+15%</span></div>
+                        <div>Living: <span className="text-green-400">-20%</span></div>
+                        <div>Transport: <span className="text-green-400">+40% savings</span></div>
+                        <div>Healthcare: <span className="text-green-400">Free NHS</span></div>
+                      </div>
+                    </div>
+                    <div className="cost-card">
+                      <h4 className="text-yellow-400">Moving Costs</h4>
+                      <div className="space-y-1 text-sm">
+                        <div>Shipping: £8,000 - £12,000</div>
+                        <div>Visa: £1,500 - £3,000</div>
+                        <div>Temp Housing: £1,200/month</div>
+                        <div>Legal: £2,000 - £4,000</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="iframe-section">
+                <h3 className="text-white font-bold mb-3">🌐 Live Relocation Portal</h3>
+                <iframe
+                  id="relocate-iframe"
+                  src={`${BACKEND_URL}/api/relocate/iframe?session_token=${sessionToken}`}
+                  title="Relocate Me - Phoenix to Peak District"
+                  className="relocate-iframe"
+                  width="100%"
+                  height="400"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const renderWindowContent = (component) => {
     switch (component) {
@@ -874,9 +1265,15 @@ const App = () => {
       case 'SkillDev': return <SkillDev />;
       case 'PongGame': return <PongGame />;
       case 'Achievements': return <Achievements />;
+      case 'RelocateBrowser': return <RelocateBrowser />;
       default: return <div>Unknown component</div>;
     }
   };
+
+  // Show login form if not logged in
+  if (!isLoggedIn) {
+    return <LoginForm />;
+  }
 
   return (
     <div className="os-desktop">
@@ -900,11 +1297,17 @@ const App = () => {
       {/* Top Panel */}
       <div className="top-panel">
         <div className="flex items-center">
-          <div className="os-logo">ThriveRemote OS v2.0</div>
+          <div className="os-logo">ThriveRemote OS v3.0</div>
           <div className="ml-4 text-xs text-green-400">
-            🔥 {dashboardStats?.daily_streak || 0} day streak | 📈 {dashboardStats?.productivity_score || 0}/100
+            👤 {currentUser?.username} | 🔥 {dashboardStats?.daily_streak || 0} day streak | 📈 {dashboardStats?.productivity_score || 0}/100
           </div>
           <div className="ml-auto flex items-center space-x-4">
+            <button 
+              onClick={handleLogout}
+              className="text-red-400 hover:text-red-300 text-xs font-bold"
+            >
+              Logout
+            </button>
             <div className="system-stats">
               CPU: 15% | RAM: 8.2GB | NET: ↑2.1MB ↓1.4MB
             </div>
@@ -938,7 +1341,9 @@ const App = () => {
           style={{
             left: window.position.x,
             top: window.position.y,
-            zIndex: window.zIndex
+            zIndex: window.zIndex,
+            width: window.size.width,
+            height: window.size.height
           }}
           onMouseDown={(e) => handleMouseDown(e, window.id)}
         >
