@@ -272,8 +272,39 @@ const App = () => {
   const JobSearch = () => (
     <div className="terminal-content">
       <div className="terminal-header">
-        <span className="text-cyan-400">thriveremote@system:~$</span> jobs --list --remote --hot
+        <span className="text-cyan-400">thriveremote@system:~$</span> jobs --list --remote --live-data
       </div>
+      
+      <div className="mb-4">
+        <button 
+          className="apply-btn mr-2"
+          onClick={async () => {
+            try {
+              const response = await fetch(`${BACKEND_URL}/api/jobs/refresh?user_id=${USER_ID}`, {
+                method: 'POST'
+              });
+              const result = await response.json();
+              
+              setNotifications(prev => [...prev, {
+                id: 'jobs_refresh',
+                type: 'success',
+                title: '🔄 Jobs Refreshed!',
+                message: `${result.message} (+5 points)`,
+                timestamp: new Date().toISOString()
+              }]);
+              
+              // Refresh page to show new jobs
+              setTimeout(() => window.location.reload(), 2000);
+            } catch (error) {
+              console.error('Error refreshing jobs:', error);
+            }
+          }}
+        >
+          🔄 Refresh Live Jobs
+        </button>
+        <span className="text-gray-400 text-sm">Get latest remote opportunities from Remotive API</span>
+      </div>
+      
       <div className="space-y-3 mt-4 max-h-96 overflow-y-auto">
         {jobs.map((job, index) => (
           <div key={job.id} className="job-card fade-in-up" style={{ animationDelay: `${index * 0.1}s` }}>
@@ -287,6 +318,9 @@ const App = () => {
                     <span key={skill} className="skill-tag">{skill}</span>
                   ))}
                 </div>
+                {job.source && (
+                  <div className="text-xs text-blue-400 mt-1">Source: {job.source}</div>
+                )}
               </div>
               <div className="text-right">
                 <span className={`status-badge ${job.application_status === 'applied' ? 'applied' : 
@@ -300,6 +334,16 @@ const App = () => {
                   >
                     Apply Now ⚡
                   </button>
+                )}
+                {job.url && (
+                  <a 
+                    href={job.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="block mt-1 text-xs text-cyan-400 hover:text-cyan-300"
+                  >
+                    View Original →
+                  </a>
                 )}
               </div>
             </div>
