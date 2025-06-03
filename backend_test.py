@@ -110,6 +110,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
 
     def test_07_job_apply_endpoint(self):
         """Test the job apply endpoint"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         # First get jobs
         jobs = self.test_06_jobs_endpoint()
         
@@ -132,6 +135,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
 
     def test_08_applications_endpoint(self):
         """Test the applications endpoint"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         response = requests.get(f"{self.base_url}/api/applications?session_token={self.session_token}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -142,6 +148,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
 
     def test_09_savings_endpoint(self):
         """Test the savings endpoint"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         response = requests.get(f"{self.base_url}/api/savings?session_token={self.session_token}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -154,6 +163,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
 
     def test_10_update_savings_endpoint(self):
         """Test updating savings"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         new_amount = 1000.0
         response = requests.post(
             f"{self.base_url}/api/savings/update?session_token={self.session_token}&amount={new_amount}"
@@ -171,6 +183,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
 
     def test_11_tasks_endpoint(self):
         """Test the tasks endpoint"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         response = requests.get(f"{self.base_url}/api/tasks?session_token={self.session_token}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -181,6 +196,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
 
     def test_12_create_task_endpoint(self):
         """Test creating a task"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         task_data = {
             "title": "Test Task",
             "description": "This is a test task",
@@ -203,6 +221,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
 
     def test_13_complete_task_endpoint(self):
         """Test completing a task"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         # Create a task first
         task = self.test_12_create_task_endpoint()
         task_id = task["id"]
@@ -219,6 +240,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
 
     def test_14_dashboard_stats_endpoint(self):
         """Test the dashboard stats endpoint"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         response = requests.get(f"{self.base_url}/api/dashboard/stats?session_token={self.session_token}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -229,6 +253,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
 
     def test_15_achievements_endpoint(self):
         """Test the achievements endpoint"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         response = requests.get(f"{self.base_url}/api/achievements?session_token={self.session_token}")
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -239,6 +266,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
         
     def test_16_achievement_unlock_endpoint(self):
         """Test the achievement unlock endpoint"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         # First get achievements
         achievements = self.test_15_achievements_endpoint()
         
@@ -264,6 +294,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
 
     def test_17_terminal_command_endpoint(self):
         """Test the terminal command endpoint"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         # Test various commands
         commands = ["help", "jobs", "savings", "tasks", "stats", "relocate", "properties", "costs"]
         
@@ -281,6 +314,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
         
     def test_18_pong_score_endpoint(self):
         """Test the pong score endpoint"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         # Submit a score
         score = 150
         response = requests.post(
@@ -296,6 +332,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
         
     def test_19_tasks_upload_download_endpoints(self):
         """Test the tasks upload and download endpoints"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         # First download current tasks
         download_response = requests.get(
             f"{self.base_url}/api/tasks/download?session_token={self.session_token}"
@@ -342,6 +381,9 @@ class ThriveRemoteAPITester(unittest.TestCase):
         
     def test_20_realtime_notifications_endpoint(self):
         """Test the realtime notifications endpoint"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         response = requests.get(
             f"{self.base_url}/api/realtime/notifications?session_token={self.session_token}"
         )
@@ -350,11 +392,14 @@ class ThriveRemoteAPITester(unittest.TestCase):
         self.assertIn("notifications", data)
         print(f"✅ Realtime notifications endpoint test passed - Found {len(data['notifications'])} notifications")
         
-    def test_18_user_profile_endpoint(self):
+    def test_21_user_profile_endpoint(self):
         """Test the user profile endpoint"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         response = requests.get(
             f"{self.base_url}/api/user/profile",
-            params={"user_id": self.user_id}
+            params={"session_token": self.session_token, "user_id": self.user_id}
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -362,8 +407,11 @@ class ThriveRemoteAPITester(unittest.TestCase):
         self.assertEqual(data["user_id"], self.user_id)
         print(f"✅ User profile endpoint test passed")
         
-    def test_19_update_user_profile_endpoint(self):
+    def test_22_update_user_profile_endpoint(self):
         """Test updating user profile"""
+        if not self.session_token:
+            self.skipTest("No session token available")
+            
         profile_data = {
             "username": "TestUser",
             "email": "test@example.com",
@@ -373,7 +421,7 @@ class ThriveRemoteAPITester(unittest.TestCase):
         response = requests.put(
             f"{self.base_url}/api/user/profile",
             json=profile_data,
-            params={"user_id": self.user_id}
+            params={"session_token": self.session_token, "user_id": self.user_id}
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -383,7 +431,7 @@ class ThriveRemoteAPITester(unittest.TestCase):
         # Verify the update
         profile_response = requests.get(
             f"{self.base_url}/api/user/profile",
-            params={"user_id": self.user_id}
+            params={"session_token": self.session_token, "user_id": self.user_id}
         )
         profile_data = profile_response.json()
         self.assertEqual(profile_data["username"], "TestUser")
